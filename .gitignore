@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+ENV/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Data
+*.db
+*.sqlite
+data/
+uploads/
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Milvus
+*.milvus
+fraud_patterns.db
+
+# Test artifacts
+test_report.json
+PLAN.md
+.pytest_cache/
+
+# Claude
+.claude/

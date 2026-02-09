@@ -1,0 +1,42 @@
+{
+  "claim_data": {
+    "claimant": {
+      "name": "Robert J. Mitchell",
+      "address": "1847 Oakwood Drive, Tampa, FL 33612",
+      "phone": "(813) 555-0192",
+      "email": "r.mitchell@email.com",
+      "dob": "1985-03-14"
+    },
+    "policy": {
+      "number": "FL-AUTO-2025-88421",
+      "holder": "Robert J. Mitchell",
+      "type": "auto",
+      "coverage_amount": 50000.00
+    },
+    "incident": {
+      "date": "2025-12-18",
+      "time": "23:45",
+      "location": "Intersection of Dale Mabry Hwy and Spruce St, Tampa, FL",
+      "description": "Claimant states he was rear-ended by an unidentified vehicle while stopped at a red light. The other vehicle fled the scene. Claimant reports severe whiplash and back pain. No police report filed. No witnesses. Claimant drove home after the incident and sought medical treatment 5 days later at QuickCare Medical Center."
+    },
+    "claim": {
+      "number": "CLM-2025-1218-4490",
+      "date": "2026-01-02",
+      "amount": 47500.00,
+      "type": "auto"
+    },
+    "vehicle": {
+      "make": "BMW",
+      "model": "X5",
+      "year": "2019",
+      "vin": "5UXCR6C05K0Z12345"
+    },
+    "medical": {
+      "injuries": ["severe whiplash", "lumbar strain", "chronic neck pain", "shoulder impingement"],
+      "providers": ["QuickCare Medical Center", "Tampa Pain Management Associates"],
+      "costs": 38500.00
+    },
+    "witnesses": []
+  },
+  "raw_text": "INSURANCE CLAIM FORM\n\nClaimant: Robert J. Mitchell\nPolicy: FL-AUTO-2025-88421\nDate of Loss: December 18, 2025\n\nDESCRIPTION OF INCIDENT:\nI was driving my 2019 BMW X5 southbound on Dale Mabry Highway at approximately 11:45 PM on December 18, 2025. I was stopped at a red light at the intersection with Spruce Street when I was rear-ended by another vehicle. The impact was severe and pushed my vehicle into the intersection. The other driver did not stop and fled the scene. I was unable to get the license plate number due to the shock of the collision.\n\nI experienced immediate neck and back pain but was able to drive home. I initially tried to rest and recover but the pain worsened over the following days. I sought medical treatment at QuickCare Medical Center on December 23, 2025, where I was diagnosed with severe whiplash, lumbar strain, and shoulder impingement.\n\nI have been receiving ongoing treatment at Tampa Pain Management Associates including physical therapy, chiropractic adjustments, and pain management injections. My treating physician states I may require surgery if symptoms do not improve.\n\nDAMAGE ASSESSMENT:\nRear bumper replacement: $4,200\nTrunk lid repair: $2,800\nRear quarter panel repair: $1,500\nPaint and refinish: $500\nTotal vehicle damage: $9,000\n\nMEDICAL EXPENSES:\nEmergency evaluation: $1,200\nMRI (cervical spine): $3,500\nMRI (lumbar spine): $3,500\nPhysical therapy (24 sessions): $12,000\nChiropractic care (18 visits): $5,400\nPain management injections (3): $9,000\nPrescription medications: $1,400\nFuture surgery estimate: $2,500\nTotal medical: $38,500\n\nTOTAL CLAIM: $47,500\n\nI declare that the above information is true and accurate to the best of my knowledge.\n\nSigned: Robert J. Mitchell\nDate: January 2, 2026"
+}

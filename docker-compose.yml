@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  fraudlens:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+      - NIM_MODEL=meta/llama-3.3-70b-instruct
+      - MILVUS_HOST=milvus
+      - MILVUS_PORT=19530
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - milvus
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  milvus:
+    image: milvusdb/milvus:v2.4.0
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    volumes:
+      - milvus_data:/var/lib/milvus
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+    command: ["milvus", "run", "standalone"]
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.5
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+    volumes:
+      - etcd_data:/etcd
+
+volumes:
+  milvus_data:
+  etcd_data:
