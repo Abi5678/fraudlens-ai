@@ -1,0 +1,158 @@
+# ============================================
+# FraudLens AI v2 - NeMo Agent Toolkit Workflow
+# ============================================
+
+general:
+  use_uvloop: true
+  log_level: INFO
+
+# ============================================
+# LLM Configurations
+# ============================================
+llms:
+  # Primary LLM via NVIDIA NIM
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.1
+    max_tokens: 4096
+    
+  # Alternative: Nemotron for complex reasoning
+  nemotron_llm:
+    _type: nim
+    model_name: nvidia/nemotron-4-340b-instruct
+    temperature: 0.0
+    max_tokens: 8192
+
+  # Local option via Ollama
+  ollama_llm:
+    _type: ollama
+    model_name: llama3.3:70b
+    temperature: 0.1
+
+# ============================================
+# Embedding Configuration
+# ============================================
+embeddings:
+  nvidia_embed:
+    _type: nim
+    model_name: nvidia/nv-embedqa-e5-v5
+    
+# ============================================
+# Vector Store Configuration  
+# ============================================
+vector_stores:
+  fraud_patterns:
+    _type: milvus
+    collection_name: fraud_patterns
+    dimension: 1024
+    metric_type: COSINE
+
+# ============================================
+# Agent Functions
+# ============================================
+functions:
+  # Document Extraction Agent
+  document_extractor:
+    _type: custom_function
+    module: agents.document_agent
+    class_name: DocumentAgent
+    description: "Extract structured data from insurance claim documents using Nemotron-Parse"
+    
+  # Inconsistency Detection Agent
+  inconsistency_detector:
+    _type: custom_function
+    module: agents.inconsistency_agent
+    class_name: InconsistencyAgent
+    llm_name: nim_llm
+    description: "Detect logical contradictions and timeline impossibilities in claims"
+    
+  # Pattern Matching Agent (RAG)
+  pattern_matcher:
+    _type: rag_function
+    module: agents.pattern_agent
+    class_name: PatternAgent
+    vector_store: fraud_patterns
+    embedding: nvidia_embed
+    top_k: 10
+    description: "Match claim against known fraud patterns using semantic search"
+    
+  # Fraud Scoring Agent
+  fraud_scorer:
+    _type: custom_function
+    module: agents.scoring_agent
+    class_name: ScoringAgent
+    llm_name: nim_llm
+    description: "Calculate overall fraud risk score with explainable reasoning"
+    
+  # Fraud Narrative Generator
+  narrative_generator:
+    _type: custom_function
+    module: agents.narrative_agent
+    class_name: NarrativeAgent
+    llm_name: nemotron_llm
+    description: "Generate comprehensive investigative report explaining fraud indicators"
+    
+  # Network Analyzer (Fraud Ring Detection)
+  network_analyzer:
+    _type: custom_function
+    module: agents.network_agent
+    class_name: NetworkAgent
+    description: "Analyze cross-claim relationships to detect fraud rings using cuGraph"
+    
+  # Deepfake Detector
+  deepfake_detector:
+    _type: custom_function
+    module: agents.deepfake_agent
+    class_name: DeepfakeAgent
+    description: "Verify authenticity of submitted photos and documents"
+
+# ============================================
+# Workflow Definition
+# ============================================
+workflow:
+  _type: parallel_then_aggregate
+  name: fraud_detection_workflow
+  description: "Multi-agent fraud detection pipeline"
+  
+  # Phase 1: Document Processing (Sequential)
+  preprocessing:
+    _type: sequential
+    steps:
+      - document_extractor
+      
+  # Phase 2: Analysis (Parallel)
+  analysis:
+    _type: parallel
+    steps:
+      - inconsistency_detector
+      - pattern_matcher
+      - deepfake_detector
+      - network_analyzer
+      
+  # Phase 3: Scoring and Reporting (Sequential)
+  postprocessing:
+    _type: sequential
+    steps:
+      - fraud_scorer
+      - narrative_generator
+      
+  # Aggregation
+  aggregator:
+    _type: custom_function
+    module: agents.aggregator
+    class_name: ResultAggregator
+    description: "Combine all agent outputs into final report"
+
+# ============================================
+# Retry and Error Handling
+# ============================================
+retry:
+  max_retries: 3
+  retry_delay: 1.0
+  exponential_backoff: true
+  
+error_handling:
+  on_agent_failure: continue_with_partial
+  log_errors: true
+  fallback_enabled: true
