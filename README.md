@@ -6,6 +6,9 @@
 [![NVIDIA](https://img.shields.io/badge/NVIDIA-NIM%20%7C%20NeMo%20%7C%20cuGraph-76B900?logo=nvidia)](https://developer.nvidia.com)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-fraudlensai.streamlit.app-FF4B4B?logo=streamlit)](https://fraudlensai.streamlit.app)
+
+> **[Try the Live Demo](https://fraudlensai.streamlit.app)** | Upload any insurance claim PDF, image, or JSON and get a full fraud analysis in under 5 minutes.
 
 ---
 
@@ -131,8 +134,8 @@ flowchart TB
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/fraudlens-nvidia.git
-cd fraudlens-nvidia
+git clone https://github.com/Abi5678/fraudlens-ai.git
+cd fraudlens-ai
 
 # Create virtual environment
 python -m venv venv
@@ -313,4 +316,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 **Detecting fraud in minutes, not months.**
 
-[⭐ Star this repo](https://github.com/YOUR_USERNAME/fraudlens-nvidia) | [🐛 Report Bug](https://github.com/YOUR_USERNAME/fraudlens-nvidia/issues) | [💡 Request Feature](https://github.com/YOUR_USERNAME/fraudlens-nvidia/issues)
+[⭐ Star this repo](https://github.com/Abi5678/fraudlens-ai) | [🐛 Report Bug](https://github.com/Abi5678/fraudlens-ai/issues) | [💡 Request Feature](https://github.com/Abi5678/fraudlens-ai/issues)
