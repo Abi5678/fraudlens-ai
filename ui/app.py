@@ -1057,10 +1057,10 @@ def main():
     st.markdown("""
     <div style="padding: 8px 0 8px 0;">
         <p style="font-size: 32px; font-weight: 800; letter-spacing: -1.5px; color: #f0f0f5; margin: 0;">
-            Fraud <span style="color: #76B900;">Detection</span>
+            FraudLens <span style="color: #76B900;">AI</span>
         </p>
-        <p style="font-size: 13px; color: #7a7a90; margin: 4px 0 0 0;">
-            Multi-agent AI analysis powered by NVIDIA NIM, NeMo Retriever, and cuGraph
+        <p style="font-size: 14px; color: #9a9ab0; margin: 4px 0 0 0; font-weight: 400;">
+            See Through Every Claim <span style="color: #55556a;">&mdash;</span> <span style="font-size: 11px; color: #55556a;">Powered by NVIDIA NIM</span>
         </p>
     </div>
     """, unsafe_allow_html=True)
