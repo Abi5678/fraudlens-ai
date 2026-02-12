@@ -458,8 +458,8 @@ NARRATIVE:
 # ---------------------------------------------------------------------------
 
 def render():
-    """Main entry point for the insurance fraud vertical."""
-    render_hero("FraudLens", "AI", "See Through Every Claim")
+    """Main entry point for the auto insurance fraud vertical."""
+    render_hero("AutoClaim", "AI", "Detect Auto Insurance Fraud")
 
     uploaded_file = st.file_uploader(
         "Drop a claim document (PDF, image, or JSON)",

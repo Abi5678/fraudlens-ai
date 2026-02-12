@@ -3,8 +3,8 @@ FraudLens AI Platform - Streamlit Dashboard
 Multi-vertical document analysis powered by NVIDIA NIM
 
 Verticals:
-  - Insurance Fraud Detection
-  - Mortgage Loan Verification
+  - Medical Insurance Fraud Detection
+  - Auto Insurance Fraud Detection
   - Photo ID Verification
 """
 
@@ -324,13 +324,13 @@ st.markdown(DESIGN_CSS, unsafe_allow_html=True)
 # ---------------------------------------------------------------------------
 
 VERTICALS = {
-    "Insurance Fraud": {
-        "key": "insurance",
-        "description": "Detect fraud in insurance claims",
+    "Medical Insurance": {
+        "key": "medical",
+        "description": "Detect billing fraud in medical claims",
     },
-    "Mortgage Verify": {
-        "key": "mortgage",
-        "description": "Verify mortgage loan applications",
+    "Auto Insurance": {
+        "key": "auto",
+        "description": "Detect fraud in auto insurance claims",
     },
     "Photo ID Check": {
         "key": "photo_id",
@@ -374,11 +374,11 @@ def render_sidebar():
         st.markdown("---")
 
         # Per-vertical settings (AI Agents expanders)
-        if vertical_key == "insurance":
-            from ui.verticals.insurance import render_sidebar_settings
+        if vertical_key == "medical":
+            from ui.verticals.medical import render_sidebar_settings
             render_sidebar_settings()
-        elif vertical_key == "mortgage":
-            from ui.verticals.mortgage import render_sidebar_settings
+        elif vertical_key == "auto":
+            from ui.verticals.insurance import render_sidebar_settings
             render_sidebar_settings()
         elif vertical_key == "photo_id":
             from ui.verticals.photo_id import render_sidebar_settings
@@ -407,7 +407,7 @@ def render_sidebar():
         st.markdown("""
         <div style="display: flex; flex-wrap: wrap; gap: 3px; padding: 2px 0 6px 0;">
             <span class="tech-badge">NIM</span><span class="tech-badge">Nemotron</span><span class="tech-badge">NeMo</span>
-            <span class="tech-badge">cuGraph</span><span class="tech-badge">Milvus</span><span class="tech-badge">TensorRT</span>
+            <span class="tech-badge">Guardrails</span><span class="tech-badge">Milvus</span><span class="tech-badge">Curator</span>
         </div>
         <div style="text-align: center; padding: 8px 0 0 0;">
             <div style="font-size: 10px; color: #3a3a4a;">NVIDIA GTC 2026</div>
@@ -463,13 +463,13 @@ def render_sidebar():
 def main():
     vertical_key = render_sidebar()
 
-    if vertical_key == "insurance":
-        from ui.verticals.insurance import render as render_insurance
-        render_insurance()
+    if vertical_key == "medical":
+        from ui.verticals.medical import render as render_medical
+        render_medical()
 
-    elif vertical_key == "mortgage":
-        from ui.verticals.mortgage import render as render_mortgage
-        render_mortgage()
+    elif vertical_key == "auto":
+        from ui.verticals.insurance import render as render_auto
+        render_auto()
 
     elif vertical_key == "photo_id":
         from ui.verticals.photo_id import render as render_photo_id
