@@ -101,6 +101,8 @@ class ScoringAgent:
         logger.info("ScoringAgent calculating fraud score")
         use_id_weights = id_consistency_results is not None
         weights = self.WEIGHTS_ID if use_id_weights else self.WEIGHTS
+        # Support raw_text from param or from claim_data (e.g. medical flow)
+        raw_text = raw_text or claim_data.get("_raw_text", "")
 
         try:
             risk_factors = []

@@ -1,3 +1,12 @@
+---
+title: FraudLens AI
+emoji: 🛡️
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 8501
+---
+
 # 🛡️ FraudLens AI v2 — NVIDIA Edition
 
 **Multi-Agent Insurance Fraud Detection System**  
@@ -9,6 +18,18 @@
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-fraudlensai.streamlit.app-FF4B4B?logo=streamlit)](https://fraudlensai.streamlit.app)
 
 > **[Try the Live Demo](https://fraudlensai.streamlit.app)** | Upload any insurance claim PDF, image, or JSON and get a full fraud analysis in under 5 minutes.
+
+---
+
+## 🖥️ Run locally
+
+```bash
+./setup.sh              # first time: venv + deps + .env
+source venv/bin/activate
+./run.sh                # or: streamlit run ui/app.py
+```
+
+Then open **http://localhost:8501**. Set `NVIDIA_API_KEY` in `.env` for AI agents.
 
 ---
 

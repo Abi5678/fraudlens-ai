@@ -124,9 +124,14 @@ class MedicalClaimLensAI:
             "pattern_risk_score": medical_risk,
         }
 
+        # Pass raw_text inside claim_data so ScoringAgent can use it without requiring the param
+        claim_for_scoring = {**claim_data, "_raw_text": raw_text}
         score_result = await self.scoring_agent.calculate_score(
-            claim_data, inconsistency_result, pattern_result, None, None,
-            raw_text=raw_text,
+            claim_for_scoring,
+            inconsistency_result,
+            pattern_result,
+            None,
+            None,
         )
 
         # Phase 4: Reasoning + Narrative in parallel

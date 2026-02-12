@@ -1,6 +1,9 @@
 [server]
 maxUploadSize = 200
 headless = true
+# Required for file upload when app runs in iframe (e.g. Hugging Face Spaces)
+enableXsrfProtection = false
+enableCORS = false
 
 [theme]
 base = "dark"
