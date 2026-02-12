@@ -29,6 +29,7 @@ class TemplateMatchAgent:
         logger.info("Template Match Agent: starting analysis")
 
         prompt = f"""You are an expert document forensics analyst specializing in identity document verification.
+**Be strict and conservative:** When in doubt, assign a higher risk_score and add a flag. Prefer to flag potential issues rather than dismiss them.
 
 Analyze the following extracted ID document data for authenticity indicators.
 
@@ -43,9 +44,13 @@ Check for these indicators:
 2. **Required fields**: Are all mandatory fields present (name, DOB, expiry, ID number, photo)?
 3. **Format consistency**: Do field formats match expected patterns (date formats, ID number structure)?
 4. **Font anomalies**: Any mentions of inconsistent text rendering or font issues?
-5. **Security features**: Any indicators of missing security elements (hologram markers, watermarks)?
+5. **Security features** (be strict): Any indicators of missing/implausible security elements?
+   - Expect at least some mention/visual hint of hologram/overlay/ghost image zone on modern IDs.
+   - If microprint/fine-line patterns are expected, note if the scan/photo quality makes them unverifiable and recommend re-capture (macro shot).
+   - UV/raised text cannot be confirmed from a normal photo: if not provided, explicitly recommend requesting UV and angled-light close-ups.
 6. **Expiry status**: Is the document expired or suspiciously close to expiry/issuance?
 7. **Issuing authority**: Does the issuing authority match the document type and jurisdiction?
+8. **FAKE ID RED FLAGS** (score these as high risk): (a) Placeholder or repetitive ID numbers (e.g. G1111111, 12345678, all same digit). (b) Generic dates (01/01/1997, 01/01/2000, first-of-month DOB). (c) Expired document. (d) If document lists physical description (HAIR, EYES), consider whether it could conflict with a typical photo (e.g. RED hair listed but photo would show dark hair—flag as critical). (e) Issue date before person could legally hold the ID (e.g. under 16 for driver license).
 
 Return a JSON object:
 {{
@@ -76,7 +81,7 @@ Return a JSON object:
         try:
             response = await self.nim.chat(
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.1,
+                temperature=0.0,
                 max_tokens=1500,
             )
 

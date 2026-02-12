@@ -171,6 +171,7 @@ class FraudLensAI:
         score_result = await self.scoring_agent.calculate_score(
             claim_data, inconsistency_result, pattern_result,
             network_result, deepfake_result,
+            raw_text=raw_text,
         )
 
         # Phase 4: Reasoning + Narrative in PARALLEL (saves ~3-5s)

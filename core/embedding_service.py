@@ -95,8 +95,11 @@ class VectorStore:
             if self.use_lite:
                 # Use Milvus Lite for local development
                 from pymilvus import MilvusClient, DataType
+                from pathlib import Path
 
-                db_path = f"./{self.collection_name}.db"
+                # Use absolute path so it works regardless of cwd (e.g. Streamlit)
+                base = Path(__file__).parent.parent
+                db_path = str(base / f"{self.collection_name}.db")
                 self._client = MilvusClient(db_path)
 
                 # Drop and recreate if schema mismatch

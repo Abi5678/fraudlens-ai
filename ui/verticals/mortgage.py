@@ -19,12 +19,12 @@ from ui.components.results_common import (
 
 AGENT_CARDS_HTML = """
 <div style="padding: 0;">
-    <div class="agent-card"><span class="agent-icon">📄</span><span class="agent-name">Document Intelligence</span><span class="agent-status">Nemotron</span></div>
-    <div class="agent-card"><span class="agent-icon">💰</span><span class="agent-name">Income Verifier</span><span class="agent-status">NIM LLM</span></div>
-    <div class="agent-card"><span class="agent-icon">🏠</span><span class="agent-name">Property Valuator</span><span class="agent-status">NIM LLM</span></div>
-    <div class="agent-card"><span class="agent-icon">🔍</span><span class="agent-name">Inconsistency Detector</span><span class="agent-status">NIM LLM</span></div>
-    <div class="agent-card"><span class="agent-icon">📊</span><span class="agent-name">Risk Scorer</span><span class="agent-status">Ensemble</span></div>
-    <div class="agent-card"><span class="agent-icon">📝</span><span class="agent-name">Report Writer</span><span class="agent-status">NIM LLM</span></div>
+    <div class="agent-card"><span class="agent-icon">📄</span><span class="agent-name">Document Intelligence</span><span class="agent-status">Nemotron-Parse</span></div>
+    <div class="agent-card"><span class="agent-icon">💰</span><span class="agent-name">Income Verifier</span><span class="agent-status">NIM Llama 3.3</span></div>
+    <div class="agent-card"><span class="agent-icon">🏠</span><span class="agent-name">Property Valuator</span><span class="agent-status">NIM Llama 3.3</span></div>
+    <div class="agent-card"><span class="agent-icon">🔍</span><span class="agent-name">Inconsistency Detector</span><span class="agent-status">NIM Llama 3.3</span></div>
+    <div class="agent-card"><span class="agent-icon">📊</span><span class="agent-name">Risk Scorer</span><span class="agent-status">Weighted Ensemble</span></div>
+    <div class="agent-card"><span class="agent-icon">📝</span><span class="agent-name">Report Writer</span><span class="agent-status">NIM Llama 3.3</span></div>
 </div>
 """
 

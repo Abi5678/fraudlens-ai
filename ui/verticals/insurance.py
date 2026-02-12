@@ -23,13 +23,13 @@ from ui.components.results_common import (
 # ---------------------------------------------------------------------------
 AGENT_CARDS_HTML = """
 <div style="padding: 0;">
-    <div class="agent-card"><span class="agent-icon">📄</span><span class="agent-name">Document Intelligence</span><span class="agent-status">Nemotron</span></div>
-    <div class="agent-card"><span class="agent-icon">🔍</span><span class="agent-name">Inconsistency Detector</span><span class="agent-status">NIM LLM</span></div>
-    <div class="agent-card"><span class="agent-icon">🎯</span><span class="agent-name">Pattern Matcher</span><span class="agent-status">NeMo RAG</span></div>
-    <div class="agent-card"><span class="agent-icon">📊</span><span class="agent-name">Risk Scorer</span><span class="agent-status">Ensemble</span></div>
-    <div class="agent-card"><span class="agent-icon">📝</span><span class="agent-name">Narrative Writer</span><span class="agent-status">NIM LLM</span></div>
+    <div class="agent-card"><span class="agent-icon">📄</span><span class="agent-name">Document Intelligence</span><span class="agent-status">Nemotron-Parse</span></div>
+    <div class="agent-card"><span class="agent-icon">🔍</span><span class="agent-name">Inconsistency Detector</span><span class="agent-status">NIM Llama 3.3</span></div>
+    <div class="agent-card"><span class="agent-icon">🎯</span><span class="agent-name">Pattern Matcher</span><span class="agent-status">NeMo Retriever + Milvus</span></div>
     <div class="agent-card"><span class="agent-icon">🕸️</span><span class="agent-name">Network Analyzer</span><span class="agent-status">cuGraph</span></div>
-    <div class="agent-card"><span class="agent-icon">🖼️</span><span class="agent-name">Deepfake Detector</span><span class="agent-status">TensorRT</span></div>
+    <div class="agent-card"><span class="agent-icon">🖼️</span><span class="agent-name">Deepfake Detector</span><span class="agent-status">NIM Nemotron 4</span></div>
+    <div class="agent-card"><span class="agent-icon">📊</span><span class="agent-name">Risk Scorer</span><span class="agent-status">Weighted Ensemble</span></div>
+    <div class="agent-card"><span class="agent-icon">📝</span><span class="agent-name">Narrative Writer</span><span class="agent-status">NIM Llama 3.3</span></div>
 </div>
 """
 
@@ -124,11 +124,13 @@ def render_deepfake_results(r):
             label = "HIGH RISK" if score >= 60 else "MODERATE" if score >= 35 else "LOW RISK"
             img_count = df.get("images_analyzed", 0)
             detections = df.get("detections", [])
+            # Deduplicate so "Missing Exif" etc. show only once
+            unique_detections = list(dict.fromkeys(detections))
             det_html = ""
-            if detections:
+            if unique_detections:
                 det_html = '<div style="margin-top: 8px;">' + ''.join(
                     f'<span style="display: inline-block; padding: 2px 8px; margin: 2px; border-radius: 20px; font-size: 10px; font-weight: 600; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #b0b0c0;">{d.replace("_", " ").title()}</span>'
-                    for d in detections[:6]
+                    for d in unique_detections[:6]
                 ) + '</div>'
 
             st.markdown(f"""

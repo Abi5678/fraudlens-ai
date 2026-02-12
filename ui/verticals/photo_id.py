@@ -19,11 +19,13 @@ from ui.components.results_common import (
 
 AGENT_CARDS_HTML = """
 <div style="padding: 0;">
-    <div class="agent-card"><span class="agent-icon">📄</span><span class="agent-name">Document Intelligence</span><span class="agent-status">Nemotron</span></div>
-    <div class="agent-card"><span class="agent-icon">🎭</span><span class="agent-name">Deepfake Detector</span><span class="agent-status">TensorRT</span></div>
-    <div class="agent-card"><span class="agent-icon">📐</span><span class="agent-name">Template Matcher</span><span class="agent-status">NIM LLM</span></div>
-    <div class="agent-card"><span class="agent-icon">🔬</span><span class="agent-name">Metadata Analyzer</span><span class="agent-status">NIM LLM</span></div>
-    <div class="agent-card"><span class="agent-icon">📊</span><span class="agent-name">Risk Scorer</span><span class="agent-status">Ensemble</span></div>
+    <div class="agent-card"><span class="agent-icon">📄</span><span class="agent-name">Document / OCR</span><span class="agent-status">NeMo OCR + Nano VL</span></div>
+    <div class="agent-card"><span class="agent-icon">🎭</span><span class="agent-name">Deepfake + AI-Gen</span><span class="agent-status">NIM Nemotron 4</span></div>
+    <div class="agent-card"><span class="agent-icon">📐</span><span class="agent-name">Template Matcher</span><span class="agent-status">NIM Llama 3.3</span></div>
+    <div class="agent-card"><span class="agent-icon">🔬</span><span class="agent-name">Metadata Analyzer</span><span class="agent-status">NIM Llama 3.3</span></div>
+    <div class="agent-card"><span class="agent-icon">🪪</span><span class="agent-name">ID Plausibility</span><span class="agent-status">Rules + NIM Vision</span></div>
+    <div class="agent-card"><span class="agent-icon">👤</span><span class="agent-name">Face Verification</span><span class="agent-status">Nemotron Nano VL</span></div>
+    <div class="agent-card"><span class="agent-icon">📊</span><span class="agent-name">Risk Scorer</span><span class="agent-status">Weighted Ensemble</span></div>
 </div>
 """
 
@@ -65,10 +67,12 @@ def render_results(r):
     df = r.deepfake_analysis or {}
     tmpl = r.template_analysis or {}
     meta = r.metadata_analysis or {}
+    consistency = getattr(r, "consistency_analysis", None) or {}
 
     deepfake_score = df.get("manipulation_score", 0)
     template_score = tmpl.get("template_match_score", 0)
     meta_score = meta.get("risk_score", 0)
+    consistency_score = consistency.get("risk_score", 0)
 
     render_score_card(
         score=r.authenticity_score,
@@ -77,6 +81,7 @@ def render_results(r):
             "Deepfake": (f"{deepfake_score:.0f}", risk_color('high') if deepfake_score > 50 else risk_color('low')),
             "Template": (f"{template_score:.0f}%", risk_color('low') if template_score >= 70 else risk_color('high')),
             "Metadata": (f"{meta_score:.0f}", risk_color('high') if meta_score > 40 else risk_color('low')),
+            "Plausibility": (f"{consistency_score:.0f}", risk_color('high') if consistency_score > 40 else risk_color('low')),
             "Images": (str(len(r.image_paths)), None),
         },
         confidence=confidence,
@@ -101,13 +106,14 @@ def render_results(r):
                         st.markdown(f'<div style="background: var(--bg-elevated); padding: 20px; border-radius: 8px; text-align: center; font-size: 10px; color: #55556a;">Image {i+1}</div>', unsafe_allow_html=True)
 
     # Tabs
+    fv = getattr(r, "face_verification", None) or {}
+    tab_names = ["Report", "Face Analysis", "Template Match", "Metadata", "ID Plausibility"]
+    if fv.get("performed"):
+        tab_names.append("Face Match")
     st.markdown("---")
-    tab_report, tab_face, tab_template, tab_meta = st.tabs([
-        "Report",
-        "Face Analysis",
-        "Template Match",
-        "Metadata",
-    ])
+    tabs = st.tabs(tab_names)
+    tab_report, tab_face, tab_template, tab_meta, tab_plausibility = tabs[0], tabs[1], tabs[2], tabs[3], tabs[4]
+    tab_face_match = tabs[5] if len(tabs) > 5 else None
 
     with tab_report:
         if r.narrative:
@@ -119,11 +125,22 @@ def render_results(r):
         if df.get("status") == "success":
             sc = "#ff4d4f" if deepfake_score >= 60 else "#ff9f43" if deepfake_score >= 35 else "#51cf66"
             label = "HIGH RISK" if deepfake_score >= 60 else "MODERATE" if deepfake_score >= 35 else "LOW RISK"
+            ai_gen = df.get("ai_generated_detected", False)
+            ai_gen_score = df.get("ai_generated_score", 0)
+            ai_gen_badge = ""
+            if ai_gen or ai_gen_score >= 50:
+                ai_gen_badge = f"""
+                <div style="margin-top: 12px; padding: 10px 14px; background: rgba(255,77,79,0.12); border: 1px solid rgba(255,77,79,0.35); border-radius: 8px;">
+                    <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #ff4d4f;">AI-Generated ID risk</div>
+                    <div style="font-size: 13px; color: #f0f0f5;">Score: {ai_gen_score:.0f}/100 — {'Detected' if ai_gen else 'Possible synthetic portrait or document'}</div>
+                </div>
+                """
             st.markdown(f"""
             <div class="dark-card" style="text-align: center; padding: 20px;">
                 <div style="font-size: 42px; font-weight: 800; color: {sc}; letter-spacing: -2px;">{deepfake_score:.0f}</div>
-                <div style="font-size: 9px; font-weight: 600; color: #55556a; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px;">Deepfake Score</div>
+                <div style="font-size: 9px; font-weight: 600; color: #55556a; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px;">Manipulation / AI-generated score</div>
                 <div style="margin-top: 8px;"><span style="padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; background: {'rgba(255,77,79,0.12)' if deepfake_score >= 60 else 'rgba(255,159,67,0.12)' if deepfake_score >= 35 else 'rgba(81,207,102,0.12)'}; color: {sc};">{label}</span></div>
+                {ai_gen_badge}
             </div>
             """, unsafe_allow_html=True)
         else:
@@ -148,11 +165,44 @@ def render_results(r):
             st.markdown(f'<div style="font-size: 12px; color: #b0b0c0; margin-bottom: 12px; line-height: 1.5;">{meta["summary"]}</div>', unsafe_allow_html=True)
         _render_flags(meta.get("flags", []), "metadata issues")
 
+    with tab_plausibility:
+        st.markdown("""
+        <div style="font-size: 12px; color: #b0b0c0; margin-bottom: 12px; line-height: 1.5;">
+        Rule-based checks: placeholder ID numbers, expired documents, generic dates, issue vs DOB, address red flags, and physical description vs photo.
+        </div>
+        """, unsafe_allow_html=True)
+        if consistency.get("summary"):
+            st.markdown(f'<div style="font-size: 12px; color: #b0b0c0; margin-bottom: 12px; line-height: 1.5;">{consistency["summary"]}</div>', unsafe_allow_html=True)
+        _render_flags(consistency.get("flags", []), "plausibility issues")
+        if consistency.get("id_number_checked"):
+            st.caption(f"ID number checked: {consistency.get('id_number_checked')}")
+        if consistency.get("dates_checked"):
+            dc = consistency["dates_checked"]
+            st.caption(f"Dates: expiry={dc.get('expiry')}, DOB={dc.get('dob')}, issue={dc.get('issue')}")
+
+    if tab_face_match and fv.get("performed"):
+        with tab_face_match:
+            same = fv.get("same_person", False)
+            conf = fv.get("confidence", 0)
+            color = "#51cf66" if same else "#ff4d4f"
+            st.markdown(f"""
+            <div class="dark-card" style="text-align: center; padding: 20px;">
+                <div style="font-size: 28px; font-weight: 800; color: {color};">{"MATCH" if same else "NO MATCH"}</div>
+                <div style="font-size: 10px; color: #55556a; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px;">Face verification (Nemotron Nano VL)</div>
+                <div style="margin-top: 8px; font-size: 14px; color: #b0b0c0;">Confidence: {conf:.0f}%</div>
+                <div style="margin-top: 12px; font-size: 12px; color: #7a7a90; text-align: left;">{fv.get("explanation", "")[:400]}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            st.caption("Compare ID portrait with second uploaded image (e.g. selfie).")
+
 
 def _build_chat_context(r):
     df = r.deepfake_analysis or {}
     tmpl = r.template_analysis or {}
     meta = r.metadata_analysis or {}
+    consistency = getattr(r, "consistency_analysis", None) or {}
+    fv = getattr(r, "face_verification", None) or {}
+    fv_str = f"Same person: {fv.get('same_person')} ({fv.get('confidence', 0):.0f}%)" if fv.get("performed") else "Not performed"
     return f"""DOCUMENT DATA: {json.dumps(r.document_data, indent=2, default=str)[:1500]}
 
 RISK SCORE: {r.authenticity_score}/100 ({r.risk_level})
@@ -161,6 +211,8 @@ RECOMMENDATION: {r.recommendation}
 DEEPFAKE ANALYSIS: Score={df.get('manipulation_score', 'N/A')}, Status={df.get('status', 'N/A')}
 TEMPLATE ANALYSIS: Type={tmpl.get('document_type', 'N/A')}, Match={tmpl.get('template_match_score', 'N/A')}%, Flags={len(tmpl.get('flags', []))}
 METADATA ANALYSIS: Risk={meta.get('risk_score', 'N/A')}, Tampering={meta.get('tampering_detected', 'N/A')}
+ID PLAUSIBILITY: Risk={consistency.get('risk_score', 'N/A')}, Flags={len(consistency.get('flags', []))}
+FACE VERIFICATION: {fv_str}
 
 NARRATIVE: {r.narrative[:1000] if r.narrative else 'N/A'}"""
 
@@ -168,6 +220,18 @@ NARRATIVE: {r.narrative[:1000] if r.narrative else 'N/A'}"""
 def render():
     """Main entry point for the photo ID verification vertical."""
     render_hero("IDVerify", "AI", "Authenticate Every Identity")
+
+    st.markdown(
+        """
+        <div style="font-size: 12px; color: #7a7a90; margin-top: -6px; margin-bottom: 10px; line-height: 1.5;">
+        For stronger checks of <b>security features</b>, upload multiple shots:
+        <b>(1)</b> straight-on, <b>(2)</b> angled/tilted (to reveal holograms/overlays),
+        <b>(3)</b> close-up/macro (microprint/fine-line patterns),
+        <b>(4)</b> UV light photo (UV elements). Raised text requires an angled-light close-up.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     uploaded_files = st.file_uploader(
         "Drop photo ID images (PNG, JPG)",

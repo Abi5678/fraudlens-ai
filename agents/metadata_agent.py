@@ -67,6 +67,7 @@ class MetadataAgent:
         metadata = self._extract_metadata(file_paths)
 
         prompt = f"""You are a digital forensics expert specializing in image and document metadata analysis.
+**Be strict and conservative:** When in doubt, assign a higher risk_score and add a flag. Missing or ambiguous metadata should be treated as suspicious.
 
 Analyze the following file metadata for signs of tampering or manipulation.
 
@@ -113,7 +114,7 @@ Return a JSON object:
         try:
             response = await self.nim.chat(
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.1,
+                temperature=0.0,
                 max_tokens=1500,
             )
 

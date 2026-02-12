@@ -1,13 +1,20 @@
 """
 Scoring Agent
-Calculates overall fraud risk score with explainable reasoning
+Calculates overall fraud risk score with explainable reasoning.
+Supports RIGID_SCORING (env): stricter thresholds and conservative recommendations.
 """
 
+import os
 from typing import Dict, Any, List
 from dataclasses import dataclass, field
 from loguru import logger
 
 from core.nim_client import get_nim_client
+
+
+def _is_rigid() -> bool:
+    """Use strict thresholds and conservative recommendations when True (default: True)."""
+    return os.environ.get("RIGID_SCORING", "true").strip().lower() in ("1", "true", "yes")
 
 
 @dataclass 
@@ -62,6 +69,14 @@ class ScoringAgent:
         "claim_characteristics": 0.15,
         "deepfake": 0.05,
     }
+    # Photo ID flow: heavier weight on consistency and deepfake
+    WEIGHTS_ID = {
+        "inconsistency": 0.20,
+        "pattern_match": 0.20,
+        "deepfake": 0.20,
+        "id_consistency": 0.30,
+        "claim_characteristics": 0.10,
+    }
     
     def __init__(self):
         self.nim_client = get_nim_client()
@@ -74,13 +89,18 @@ class ScoringAgent:
         pattern_results: Dict[str, Any],
         network_results: Dict[str, Any] = None,
         deepfake_results: Dict[str, Any] = None,
+        id_consistency_results: Dict[str, Any] = None,
+        raw_text: str = "",
     ) -> Dict[str, Any]:
         """Calculate overall fraud score locally (no LLM call).
 
         The reasoning LLM call is separated out so orchestrators
         can run it in parallel with narrative generation.
+        When id_consistency_results is provided (Photo ID flow), uses WEIGHTS_ID.
         """
         logger.info("ScoringAgent calculating fraud score")
+        use_id_weights = id_consistency_results is not None
+        weights = self.WEIGHTS_ID if use_id_weights else self.WEIGHTS
 
         try:
             risk_factors = []
@@ -89,7 +109,7 @@ class ScoringAgent:
             risk_factors.append(RiskFactor(
                 name="Inconsistencies",
                 score=inconsistency_results.get("inconsistency_score", 0),
-                weight=self.WEIGHTS["inconsistency"],
+                weight=weights["inconsistency"],
                 description=inconsistency_results.get("summary", ""),
                 evidence=[i.get("description", "") for i in inconsistency_results.get("inconsistencies", [])[:3]],
             ))
@@ -98,46 +118,65 @@ class ScoringAgent:
             risk_factors.append(RiskFactor(
                 name="Fraud Pattern Match",
                 score=pattern_results.get("pattern_risk_score", 0),
-                weight=self.WEIGHTS["pattern_match"],
+                weight=weights["pattern_match"],
                 description=pattern_results.get("summary", ""),
                 evidence=[p.get("pattern_name", "") for p in pattern_results.get("matched_patterns", [])[:3]],
             ))
 
-            # Network Risk Score
-            if network_results:
+            # Network Risk Score (not used in ID flow)
+            if network_results and not use_id_weights:
                 risk_factors.append(RiskFactor(
                     name="Network/Ring Risk",
                     score=network_results.get("network_risk_score", 0),
-                    weight=self.WEIGHTS["network_risk"],
+                    weight=weights["network_risk"],
                     description=network_results.get("summary", ""),
                     evidence=network_results.get("connections", [])[:3],
                 ))
 
-            # Deepfake / Image Authenticity Score
+            # Deepfake / Image Authenticity Score (in ID flow, include AI-generated score)
             if deepfake_results and deepfake_results.get("status") == "success":
                 df_score = deepfake_results.get("manipulation_score", 0)
+                if use_id_weights and "ai_generated_score" in deepfake_results:
+                    df_score = max(df_score, deepfake_results.get("ai_generated_score", 0))
                 df_detections = deepfake_results.get("detections", [])
+                if use_id_weights and deepfake_results.get("ai_generated_detected"):
+                    df_detections = ["ai_generated"] + [d for d in df_detections if d != "ai_generated"]
                 risk_factors.append(RiskFactor(
                     name="Image Authenticity",
                     score=df_score,
-                    weight=self.WEIGHTS["deepfake"],
+                    weight=weights["deepfake"],
                     description=deepfake_results.get("summary", ""),
                     evidence=[d.replace("_", " ").title() for d in df_detections[:3]],
                 ))
 
-            # Claim Characteristics (local — no LLM)
-            claim_score = self._score_claim_characteristics_local(claim_data)
+            # ID Consistency (Photo ID flow only)
+            if id_consistency_results is not None:
+                id_risk = id_consistency_results.get("risk_score", 0)
+                id_flags = id_consistency_results.get("flags", [])
+                risk_factors.append(RiskFactor(
+                    name="ID Plausibility",
+                    score=id_risk,
+                    weight=weights["id_consistency"],
+                    description=id_consistency_results.get("summary", ""),
+                    evidence=[f.get("description", "")[:80] for f in id_flags[:3]],
+                ))
+
+            # Claim Characteristics (local — no LLM, uses raw_text when claim_data sparse)
+            claim_score = self._score_claim_characteristics_local(claim_data, raw_text or "")
             risk_factors.append(RiskFactor(
                 name="Claim Characteristics",
                 score=claim_score["score"],
-                weight=self.WEIGHTS["claim_characteristics"],
+                weight=weights["claim_characteristics"],
                 description=claim_score["description"],
                 evidence=claim_score["flags"],
             ))
 
             # Calculate weighted overall score
             overall_score = sum(f.score * f.weight for f in risk_factors)
-            risk_level = self._get_risk_level(overall_score)
+            # Rigid mode: small upward nudge for ID flow so borderline cases tip to next level
+            if _is_rigid() and use_id_weights and overall_score > 0 and overall_score < 50:
+                overall_score = min(100, overall_score + 5)
+            risk_level = self._get_risk_level(overall_score, use_id_weights)
             confidence = self._calculate_confidence(risk_factors)
             recommendation = self._get_recommendation(risk_level)
 
@@ -155,27 +194,62 @@ class ScoringAgent:
             logger.error(f"ScoringAgent error: {e}")
             return {"status": "error", "error": str(e), "overall_score": 0, "risk_level": "unknown"}
     
-    def _score_claim_characteristics_local(self, claim_data: Dict) -> Dict[str, Any]:
-        """Score claim based on inherent characteristics (no LLM)."""
+    def _score_claim_characteristics_local(self, claim_data: Dict, raw_text: str = "") -> Dict[str, Any]:
+        """Score claim based on inherent characteristics (no LLM). Uses raw_text when claim_data is sparse."""
         flags = []
         score = 0
-        
+
         amount = claim_data.get("claim", {}).get("amount", 0)
-        if amount > 100000:
-            score += 20
-            flags.append(f"High claim amount: ${amount:,.2f}")
-        
-        injuries = claim_data.get("medical", {}).get("injuries", [])
+        if amount and amount > 0:
+            if amount > 100000:
+                score += 20
+                flags.append(f"High claim amount: ${amount:,.2f}")
+        elif raw_text:
+            # Fallback: scan raw_text for amounts when claim_data is sparse
+            import re
+            amount_matches = re.findall(r'\$[\d,]+(?:\.\d{2})?', raw_text[:5000])
+            for m in amount_matches:
+                try:
+                    val = float(m.replace("$", "").replace(",", ""))
+                    if val > 100000:
+                        score += 15
+                        flags.append(f"High amount mentioned in document: ${val:,.2f}")
+                        break
+                except (ValueError, TypeError):
+                    pass
+
+        injuries = claim_data.get("medical", {}).get("injuries", []) or []
+        if not isinstance(injuries, list):
+            injuries = [injuries] if injuries else []
         soft_tissue = ["whiplash", "soft tissue", "strain", "sprain", "neck pain", "back pain"]
         for injury in injuries:
-            if any(kw in injury.lower() for kw in soft_tissue):
+            if injury and any(kw in str(injury).lower() for kw in soft_tissue):
                 score += 15
                 flags.append(f"Soft tissue injury: {injury}")
                 break
-        
-        return {"score": min(score, 100), "description": f"{len(flags)} risk flags", "flags": flags}
+        if not flags and raw_text:
+            txt_lower = raw_text[:4000].lower()
+            if any(kw in txt_lower for kw in soft_tissue):
+                score += 10
+                flags.append("Soft tissue injury mentioned in document")
+
+        return {"score": min(score, 100), "description": f"{len(flags)} risk flags" if flags else "No inherent risk flags", "flags": flags}
     
-    def _get_risk_level(self, score: float) -> str:
+    def _get_risk_level(self, score: float, is_id_flow: bool = False) -> str:
+        """Stricter bands when RIGID_SCORING: harder to get 'low', easier to get 'high'/'critical'."""
+        if _is_rigid():
+            if is_id_flow:
+                # Photo ID: very strict — only very low scores get low risk
+                if score >= 62: return "critical"
+                if score >= 35: return "high"
+                if score >= 12: return "medium"
+                return "low"
+            # General: stricter than default
+            if score >= 68: return "critical"
+            if score >= 42: return "high"
+            if score >= 18: return "medium"
+            return "low"
+        # Default (non-rigid)
         if score >= 75: return "critical"
         elif score >= 50: return "high"
         elif score >= 25: return "medium"
@@ -189,12 +263,20 @@ class ScoringAgent:
         return max(0.5, min(0.95, 1 - (variance / 2500)))
     
     def _get_recommendation(self, risk_level: str) -> str:
-        recommendations = {
-            "critical": "DENY - Refer to SIU immediately",
-            "high": "INVESTIGATE - Assign to fraud analyst",
-            "medium": "REVIEW - Additional documentation required",
-            "low": "APPROVE - Proceed with standard processing",
-        }
+        if _is_rigid():
+            recommendations = {
+                "critical": "DENY - Refer to SIU immediately",
+                "high": "INVESTIGATE - Assign to fraud analyst",
+                "medium": "REVIEW - Additional documentation required",
+                "low": "REVIEW - Verify before approval (rigid mode)",
+            }
+        else:
+            recommendations = {
+                "critical": "DENY - Refer to SIU immediately",
+                "high": "INVESTIGATE - Assign to fraud analyst",
+                "medium": "REVIEW - Additional documentation required",
+                "low": "APPROVE - Proceed with standard processing",
+            }
         return recommendations.get(risk_level, "REVIEW")
     
     async def generate_reasoning(self, score_result: Dict[str, Any]) -> str:
