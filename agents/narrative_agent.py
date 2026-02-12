@@ -17,7 +17,7 @@ class NarrativeAgent:
         """Generate comprehensive fraud investigation narrative."""
         try:
             prompt = self._build_prompt(claim_data, fraud_score, inconsistencies, pattern_matches, network_analysis)
-            narrative = await self.nim_client.chat(messages=[{"role": "user", "content": prompt}], temperature=0.3, max_tokens=2000)
+            narrative = await self.nim_client.chat(messages=[{"role": "user", "content": prompt}], temperature=0.3, max_tokens=1000)
             
             return {"status": "success", "full_narrative": narrative, "sections": self._parse_sections(narrative)}
         except Exception as e:

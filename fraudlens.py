@@ -167,18 +167,30 @@ class FraudLensAI:
                 else None
             )
 
-        # Phase 3: Scoring
+        # Phase 3: Scoring (local — no LLM call)
         score_result = await self.scoring_agent.calculate_score(
             claim_data, inconsistency_result, pattern_result,
             network_result, deepfake_result,
         )
 
-        # Phase 4: Narrative
+        # Phase 4: Reasoning + Narrative in PARALLEL (saves ~3-5s)
         doc_result = {"claim_data": claim_data, "raw_text": raw_text}
-        narrative_result = await self.narrative_agent.generate(
+        reasoning_task = self.scoring_agent.generate_reasoning(score_result)
+        narrative_task = self.narrative_agent.generate(
             doc_result, score_result, inconsistency_result,
             pattern_result, network_result,
         )
+        reasoning, narrative_result = await asyncio.gather(
+            reasoning_task, narrative_task, return_exceptions=True
+        )
+
+        # Handle exceptions from parallel tasks
+        if isinstance(reasoning, Exception):
+            reasoning = f"Claim scored {score_result.get('overall_score', 0):.0f}/100."
+        if isinstance(narrative_result, Exception):
+            narrative_result = {"status": "error", "full_narrative": ""}
+
+        score_result["reasoning"] = reasoning
 
         logger.info(
             f"Analysis complete. Fraud Score: {score_result.get('overall_score', 0)}/100"
