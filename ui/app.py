@@ -346,12 +346,9 @@ VERTICALS = {
 def render_sidebar():
     """Render sidebar with vertical selector and per-vertical settings."""
     with st.sidebar:
-        # Logo & brand
+        # Brand (text only, no emoji)
         st.markdown("""
         <div class="fl-sidebar-header">
-            <div class="fl-logo-wrap">
-                <span class="fl-logo-icon">🛡️</span>
-            </div>
             <div class="fl-brand-name">FraudLens <span class="fl-brand-highlight">AI</span></div>
             <div class="fl-brand-tagline">Multi-Vertical Platform</div>
         </div>
