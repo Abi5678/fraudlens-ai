@@ -6,7 +6,6 @@ Verticals:
   - Insurance Fraud Detection
   - Mortgage Loan Verification
   - Photo ID Verification
-  - AI Content Detection
 """
 
 import streamlit as st
@@ -100,25 +99,48 @@ section[data-testid="stSidebar"] hr { border-color: var(--border) !important; ma
 section[data-testid="stSidebar"] .stCheckbox { padding: 2px 0 !important; }
 section[data-testid="stSidebar"] .stCheckbox label span { color: var(--text-secondary) !important; font-size: 12px !important; }
 
+/* Sidebar brand header */
+.fl-sidebar-header { text-align: center; padding: 14px 0 16px 0; }
+.fl-logo-wrap {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px;
+    background: linear-gradient(145deg, rgba(118,185,0,0.15) 0%, rgba(118,185,0,0.05) 100%);
+    border: 1px solid rgba(118,185,0,0.25); border-radius: 12px;
+    margin-bottom: 12px; box-shadow: 0 2px 12px rgba(118,185,0,0.12);
+}
+.fl-logo-icon { font-size: 26px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
+.fl-brand-name { font-size: 20px; font-weight: 800; color: #f0f0f5; letter-spacing: -0.6px; line-height: 1.2; }
+.fl-brand-highlight { color: var(--nvidia-green) !important; text-shadow: 0 0 20px rgba(118,185,0,0.35); }
+.fl-brand-tagline { font-size: 9px; color: var(--text-muted); margin-top: 6px; letter-spacing: 1.8px; text-transform: uppercase; font-weight: 600; opacity: 0.85; }
+.fl-sidebar-divider { height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); margin: 4px 0 14px 0; }
+.fl-module-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 10px; }
+
 /* Sidebar radio - card style */
-section[data-testid="stSidebar"] .stRadio > div { gap: 6px !important; }
+section[data-testid="stSidebar"] .stRadio > div {
+    gap: 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
 section[data-testid="stSidebar"] .stRadio > div > label {
-    background: var(--bg-card) !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    background: rgba(30,30,36,0.6) !important;
     border: 1px solid var(--border) !important;
-    border-radius: var(--radius-sm) !important;
-    padding: 10px 12px !important;
+    border-radius: 10px !important;
+    padding: 12px 14px !important;
     cursor: pointer !important;
-    transition: all 0.15s ease !important;
+    transition: all 0.2s cubic-bezier(0.4,0,0.2,1) !important;
 }
 section[data-testid="stSidebar"] .stRadio > div > label:hover {
-    border-color: var(--nvidia-green) !important;
-    background: var(--nvidia-green-subtle) !important;
+    border-color: rgba(118,185,0,0.4) !important;
+    background: rgba(118,185,0,0.06) !important;
 }
 section[data-testid="stSidebar"] .stRadio > div > label[data-checked="true"],
 section[data-testid="stSidebar"] .stRadio > div > label:has(input:checked) {
     border-color: var(--nvidia-green) !important;
-    background: rgba(118,185,0,0.08) !important;
-    box-shadow: 0 0 12px rgba(118,185,0,0.1) !important;
+    background: rgba(118,185,0,0.18) !important;
+    box-shadow: 0 0 16px rgba(118,185,0,0.15), inset 0 1px 0 rgba(255,255,255,0.06) !important;
 }
 section[data-testid="stSidebar"] .stRadio > div > label p {
     font-size: 13px !important;
@@ -314,10 +336,6 @@ VERTICALS = {
         "key": "photo_id",
         "description": "Authenticate identity documents",
     },
-    "AI Content Detect": {
-        "key": "ai_content",
-        "description": "Detect AI-generated content",
-    },
 }
 
 
@@ -328,23 +346,21 @@ VERTICALS = {
 def render_sidebar():
     """Render sidebar with vertical selector and per-vertical settings."""
     with st.sidebar:
-        # Logo
+        # Logo & brand
         st.markdown("""
-        <div style="text-align: center; padding: 10px 0 12px 0;">
-            <div style="font-size: 30px; margin-bottom: 4px;">🛡️</div>
-            <div style="font-size: 18px; font-weight: 800; color: #f0f0f5; letter-spacing: -0.5px;">
-                FraudLens <span style="color: #76B900;">AI</span>
+        <div class="fl-sidebar-header">
+            <div class="fl-logo-wrap">
+                <span class="fl-logo-icon">🛡️</span>
             </div>
-            <div style="font-size: 10px; color: #55556a; margin-top: 3px; letter-spacing: 1px; text-transform: uppercase;">
-                Multi-Vertical Platform
-            </div>
+            <div class="fl-brand-name">FraudLens <span class="fl-brand-highlight">AI</span></div>
+            <div class="fl-brand-tagline">Multi-Vertical Platform</div>
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("---")
+        st.markdown('<div class="fl-sidebar-divider"></div>', unsafe_allow_html=True)
 
         # Vertical selector
-        st.markdown("### Select Module")
+        st.markdown('<div class="fl-module-label">Select Module</div>', unsafe_allow_html=True)
         selected = st.radio(
             "Module",
             options=list(VERTICALS.keys()),
@@ -366,9 +382,6 @@ def render_sidebar():
             render_sidebar_settings()
         elif vertical_key == "photo_id":
             from ui.verticals.photo_id import render_sidebar_settings
-            render_sidebar_settings()
-        elif vertical_key == "ai_content":
-            from ui.verticals.ai_content import render_sidebar_settings
             render_sidebar_settings()
 
         # System status (collapsed expander)
@@ -461,10 +474,6 @@ def main():
     elif vertical_key == "photo_id":
         from ui.verticals.photo_id import render as render_photo_id
         render_photo_id()
-
-    elif vertical_key == "ai_content":
-        from ui.verticals.ai_content import render as render_ai_content
-        render_ai_content()
 
 
 if __name__ == "__main__":

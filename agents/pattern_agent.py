@@ -126,28 +126,33 @@ class PatternAgent:
         query_parts = []
         
         # Add incident description
-        incident = claim_data.get("incident", {})
+        incident = claim_data.get("incident", {}) or {}
         if incident.get("description"):
             query_parts.append(f"Incident: {incident['description']}")
         
         # Add claim type and amount
-        claim = claim_data.get("claim", {})
+        claim = claim_data.get("claim", {}) or {}
         if claim.get("type"):
             query_parts.append(f"Claim type: {claim['type']}")
         if claim.get("amount"):
             query_parts.append(f"Claim amount: ${claim['amount']:,.2f}")
         
         # Add injury information
-        medical = claim_data.get("medical", {})
-        if medical.get("injuries"):
-            injuries = ", ".join(medical["injuries"])
-            query_parts.append(f"Injuries: {injuries}")
+        medical = claim_data.get("medical", {}) or {}
+        injuries = medical.get("injuries") or []
+        if injuries:
+            inj_str = injuries if isinstance(injuries, str) else ", ".join(str(x) for x in injuries)
+            query_parts.append(f"Injuries: {inj_str}")
         
-        # Add key phrases from raw text (first 500 chars)
-        if raw_text:
-            query_parts.append(f"Details: {raw_text[:500]}")
+        # Add key phrases from raw text (first 1500 chars for better coverage)
+        if raw_text and raw_text.strip():
+            query_parts.append(f"Details: {raw_text[:1500].strip()}")
         
-        return " ".join(query_parts)
+        query = " ".join(query_parts).strip()
+        # Fallback: never return empty query — use raw text or generic placeholder
+        if not query:
+            query = raw_text[:2000].strip() if raw_text and raw_text.strip() else "insurance claim document"
+        return query
     
     async def _process_matches(
         self,
@@ -160,8 +165,8 @@ class PatternAgent:
         matches = []
         
         for result in results:
-            # Skip low similarity results
-            if result.score < 0.3:
+            # Skip low similarity results (0.2 threshold to avoid overly strict filtering)
+            if result.score < 0.2:
                 continue
             
             # Use LLM to analyze the match

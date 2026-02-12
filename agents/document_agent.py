@@ -166,6 +166,132 @@ class DocumentAgent:
                 "error": str(e),
                 "claim_data": ClaimData().to_dict(),
             }
+
+    async def process_id_image(self, image_path: str) -> Dict[str, Any]:
+        """
+        Process a photo ID image using NeMo Retriever OCR (if configured) and/or
+        Nemotron Nano VL for text extraction and multimodal reasoning.
+        Returns the same shape as process() for compatibility with ID verification pipeline.
+        """
+        image_path = Path(image_path)
+        logger.info(f"DocumentAgent processing ID image: {image_path.name}")
+
+        try:
+            from core.id_ocr_service import (
+                id_image_to_raw_text,
+                id_multimodal_reasoning,
+            )
+            raw_text, processor_used = await id_image_to_raw_text(str(image_path))
+            if not raw_text.strip():
+                # Fallback to existing Nemotron-Parse image path
+                extracted = await self.processor.process(image_path, extract_images=False)
+                claim_data = await self._structure_claim_data(extracted)
+                claim_data.raw_text = extracted.raw_text
+                return {
+                    "status": "success",
+                    "claim_data": claim_data.to_dict(),
+                    "raw_text": extracted.raw_text,
+                    "metadata": {"processor": "nemotron-parse-fallback", **extracted.metadata},
+                    "extracted_images": [],
+                }
+
+            # Optional: multimodal reasoning (layout, security features)
+            multimodal_notes = await id_multimodal_reasoning(
+                str(image_path), raw_text, self.nim_client
+            )
+            if multimodal_notes:
+                raw_text = raw_text + "\n\n[MULTIMODAL REASONING]\n" + multimodal_notes
+
+            # Structure ID fields into claim_data-like dict
+            claim_data_dict = await self._structure_id_data(raw_text)
+            return {
+                "status": "success",
+                "claim_data": claim_data_dict,
+                "raw_text": raw_text,
+                "metadata": {"processor": processor_used, "multimodal": bool(multimodal_notes)},
+                "extracted_images": [],
+            }
+        except Exception as e:
+            logger.error(f"DocumentAgent ID image error: {e}")
+            # Fallback to standard image processing
+            try:
+                extracted = await self.processor.process(image_path, extract_images=False)
+                claim_data = await self._structure_claim_data(extracted)
+                return {
+                    "status": "success",
+                    "claim_data": claim_data.to_dict(),
+                    "raw_text": extracted.raw_text,
+                    "metadata": {"processor": "nemotron-parse-fallback", "error_fallback": str(e)},
+                    "extracted_images": [],
+                }
+            except Exception as e2:
+                logger.error(f"ID fallback also failed: {e2}")
+                return {
+                    "status": "error",
+                    "error": str(e2),
+                    "claim_data": {},
+                    "raw_text": "",
+                }
+
+    async def _structure_id_data(self, raw_text: str) -> Dict[str, Any]:
+        """Use LLM to structure extracted ID text into a consistent dict for downstream agents."""
+        prompt = f"""You are an expert at parsing identity document text. Extract structured fields from this OCR/reasoning output.
+Output ONLY a JSON object with these keys (use null if not found):
+- document_type (e.g. "driver_license", "passport", "national_id")
+- issuing_jurisdiction (e.g. "California", "USA")
+- last_name, first_name (or single "name" if not split)
+- license_number or id_number or document_number
+- date_of_birth (DOB)
+- expiration_date or expiry
+- issue_date
+- address
+- hair (color), eyes (color)
+- height, weight, sex
+- class, endorsements, restrictions
+- signature (present: true/false)
+
+Raw text:
+{raw_text[:6000]}
+
+Return valid JSON only, no markdown code block."""
+
+        try:
+            response = await self.nim_client.chat(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.0,
+                max_tokens=1024,
+            )
+            import json
+            text = (response or "").strip()
+            if "```" in text:
+                text = text.split("```")[1].replace("json", "").strip()
+            data = json.loads(text)
+            # Normalize to claim_data shape for compatibility
+            name = data.get("name") or (f"{data.get('first_name', '')} {data.get('last_name', '')}".strip())
+            return {
+                "claimant": {
+                    "name": name or data.get("first_name") or data.get("last_name") or "",
+                    "address": data.get("address") or "",
+                    "dob": data.get("date_of_birth") or data.get("DOB") or "",
+                },
+                "document_type": data.get("document_type"),
+                "issuing_jurisdiction": data.get("issuing_jurisdiction"),
+                "license_number": data.get("license_number") or data.get("id_number") or data.get("document_number"),
+                "date_of_birth": data.get("date_of_birth") or data.get("DOB"),
+                "expiration_date": data.get("expiration_date") or data.get("expiry"),
+                "issue_date": data.get("issue_date"),
+                "address": data.get("address"),
+                "hair": data.get("hair"),
+                "eyes": data.get("eyes"),
+                "height": data.get("height"),
+                "weight": data.get("weight"),
+                "sex": data.get("sex"),
+                "class": data.get("class"),
+                "raw_text": raw_text[:3000],
+            }
+        except Exception as e:
+            logger.warning(f"ID structure parse error: {e}")
+            return {"claimant": {"name": "", "address": "", "dob": ""}, "raw_text": raw_text[:3000]}
     
     async def _structure_claim_data(self, extracted: ExtractedDocument) -> ClaimData:
         """Use LLM to extract structured fields from raw text"""

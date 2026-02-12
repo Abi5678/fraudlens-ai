@@ -15,6 +15,7 @@ from agents.document_agent import DocumentAgent
 from agents.deepfake_agent import DeepfakeAgent
 from agents.template_match_agent import TemplateMatchAgent
 from agents.metadata_agent import MetadataAgent
+from agents.id_consistency_agent import IDConsistencyAgent
 from agents.scoring_agent import ScoringAgent
 from agents.narrative_agent import NarrativeAgent
 
@@ -30,6 +31,8 @@ class IDVerificationResult:
     deepfake_analysis: Dict[str, Any]
     template_analysis: Dict[str, Any]
     metadata_analysis: Dict[str, Any]
+    consistency_analysis: Dict[str, Any] = field(default_factory=dict)
+    face_verification: Dict[str, Any] = field(default_factory=dict)
     scoring_details: Dict[str, Any] = field(default_factory=dict)
     image_paths: List[str] = field(default_factory=list)
     raw_text: str = ""
@@ -44,6 +47,8 @@ class IDVerificationResult:
             "deepfake_analysis": self.deepfake_analysis,
             "template_analysis": self.template_analysis,
             "metadata_analysis": self.metadata_analysis,
+            "consistency_analysis": self.consistency_analysis,
+            "face_verification": self.face_verification,
             "scoring_details": self.scoring_details,
             "images_analyzed": len(self.image_paths),
         }
@@ -60,6 +65,7 @@ class IDVerifyAI:
         self.deepfake_agent = DeepfakeAgent()
         self.template_agent = TemplateMatchAgent()
         self.metadata_agent = MetadataAgent()
+        self.consistency_agent = IDConsistencyAgent()
         self.scoring_agent = ScoringAgent()
         self.narrative_agent = NarrativeAgent()
 
@@ -69,22 +75,23 @@ class IDVerifyAI:
         """Analyze photo ID images for authenticity."""
         logger.info(f"Starting ID verification for {len(image_paths)} images")
 
-        # Phase 1: Document extraction from first image
+        # Phase 1: Document extraction from first image (NeMo Retriever OCR + Nemotron Nano VL when available)
         doc_data = {}
         raw_text = ""
         if image_paths:
             try:
-                doc_result = await self.document_agent.process(image_paths[0])
+                doc_result = await self.document_agent.process_id_image(image_paths[0])
                 doc_data = doc_result.get("claim_data", {})
                 raw_text = doc_result.get("raw_text", "")
             except Exception as e:
                 logger.warning(f"Document extraction failed: {e}")
 
-        # Phase 2: Parallel analysis
+        # Phase 2: Parallel analysis (including ID plausibility + AI-generated ID detection)
         tasks = [
-            self.deepfake_agent.analyze(image_paths),
+            self.deepfake_agent.analyze(image_paths, context="id_document"),
             self.template_agent.analyze(doc_data, raw_text),
             self.metadata_agent.analyze(image_paths, doc_data),
+            self.consistency_agent.analyze(doc_data, raw_text, image_paths),
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -101,8 +108,43 @@ class IDVerifyAI:
             results[2] if not isinstance(results[2], Exception)
             else {"risk_score": 0, "flags": []}
         )
+        consistency_result = (
+            results[3] if not isinstance(results[3], Exception)
+            else {"risk_score": 0, "flags": [], "summary": ""}
+        )
 
-        # Phase 3: Scoring (local — no LLM call)
+        # Optional: face verification when 2+ images (e.g. ID portrait + selfie)
+        face_result = {}
+        if len(image_paths) >= 2:
+            try:
+                from core.id_ocr_service import face_verify_nano_vl
+                same_person, confidence, explanation = await face_verify_nano_vl(
+                    image_paths[0], image_paths[1]
+                )
+                face_result = {
+                    "performed": True,
+                    "same_person": same_person,
+                    "confidence": confidence,
+                    "explanation": explanation,
+                }
+                if not same_person and confidence > 30:
+                    consistency_result = dict(consistency_result)
+                    consistency_result["risk_score"] = max(
+                        consistency_result.get("risk_score", 0), 75
+                    )
+                    consistency_result["flags"] = list(
+                        consistency_result.get("flags", [])
+                    ) + [{
+                        "type": "face_mismatch",
+                        "severity": "critical",
+                        "description": f"Face verification: photos do not appear to be the same person (confidence {confidence:.0f}%).",
+                        "confidence": confidence / 100,
+                    }]
+            except Exception as e:
+                logger.warning(f"Face verification failed: {e}")
+                face_result = {"performed": False, "error": str(e)}
+
+        # Phase 3: Scoring (local — no LLM call), with ID-specific weights and consistency
         incon_result = {
             "inconsistencies": template_result.get("flags", []),
             "inconsistency_score": template_result.get("risk_score", 0),
@@ -114,6 +156,7 @@ class IDVerifyAI:
 
         score_result = await self.scoring_agent.calculate_score(
             doc_data, incon_result, pattern_result, None, deepfake_result,
+            id_consistency_results=consistency_result,
         )
 
         # Phase 4: Reasoning + Narrative in PARALLEL
@@ -121,6 +164,7 @@ class IDVerifyAI:
         reasoning_task = self.scoring_agent.generate_reasoning(score_result)
         narrative_task = self.narrative_agent.generate(
             doc_result_ctx, score_result, incon_result, pattern_result, None,
+            report_type="id_verification",
         )
         reasoning, narrative_result = await asyncio.gather(
             reasoning_task, narrative_task, return_exceptions=True
@@ -144,6 +188,8 @@ class IDVerifyAI:
             deepfake_analysis=deepfake_result,
             template_analysis=template_result,
             metadata_analysis=metadata_result,
+            consistency_analysis=consistency_result,
+            face_verification=face_result,
             scoring_details=score_result,
             image_paths=image_paths,
             raw_text=raw_text,
