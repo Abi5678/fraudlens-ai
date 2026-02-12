@@ -75,12 +75,16 @@ class ScoringAgent:
         network_results: Dict[str, Any] = None,
         deepfake_results: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
-        """Calculate overall fraud score from all agent outputs."""
+        """Calculate overall fraud score locally (no LLM call).
+
+        The reasoning LLM call is separated out so orchestrators
+        can run it in parallel with narrative generation.
+        """
         logger.info("ScoringAgent calculating fraud score")
-        
+
         try:
             risk_factors = []
-            
+
             # Inconsistency Score
             risk_factors.append(RiskFactor(
                 name="Inconsistencies",
@@ -89,7 +93,7 @@ class ScoringAgent:
                 description=inconsistency_results.get("summary", ""),
                 evidence=[i.get("description", "") for i in inconsistency_results.get("inconsistencies", [])[:3]],
             ))
-            
+
             # Pattern Match Score
             risk_factors.append(RiskFactor(
                 name="Fraud Pattern Match",
@@ -98,7 +102,7 @@ class ScoringAgent:
                 description=pattern_results.get("summary", ""),
                 evidence=[p.get("pattern_name", "") for p in pattern_results.get("matched_patterns", [])[:3]],
             ))
-            
+
             # Network Risk Score
             if network_results:
                 risk_factors.append(RiskFactor(
@@ -108,7 +112,7 @@ class ScoringAgent:
                     description=network_results.get("summary", ""),
                     evidence=network_results.get("connections", [])[:3],
                 ))
-            
+
             # Deepfake / Image Authenticity Score
             if deepfake_results and deepfake_results.get("status") == "success":
                 df_score = deepfake_results.get("manipulation_score", 0)
@@ -121,8 +125,8 @@ class ScoringAgent:
                     evidence=[d.replace("_", " ").title() for d in df_detections[:3]],
                 ))
 
-            # Claim Characteristics
-            claim_score = await self._score_claim_characteristics(claim_data)
+            # Claim Characteristics (local — no LLM)
+            claim_score = self._score_claim_characteristics_local(claim_data)
             risk_factors.append(RiskFactor(
                 name="Claim Characteristics",
                 score=claim_score["score"],
@@ -136,9 +140,7 @@ class ScoringAgent:
             risk_level = self._get_risk_level(overall_score)
             confidence = self._calculate_confidence(risk_factors)
             recommendation = self._get_recommendation(risk_level)
-            
-            reasoning = await self._generate_reasoning(overall_score, risk_level, risk_factors, claim_data)
-            
+
             return {
                 "status": "success",
                 "overall_score": round(overall_score, 1),
@@ -146,15 +148,15 @@ class ScoringAgent:
                 "confidence": round(confidence, 2),
                 "risk_factors": [f.to_dict() for f in risk_factors],
                 "recommendation": recommendation,
-                "reasoning": reasoning,
+                "reasoning": "",
             }
-            
+
         except Exception as e:
             logger.error(f"ScoringAgent error: {e}")
             return {"status": "error", "error": str(e), "overall_score": 0, "risk_level": "unknown"}
     
-    async def _score_claim_characteristics(self, claim_data: Dict) -> Dict[str, Any]:
-        """Score claim based on inherent characteristics"""
+    def _score_claim_characteristics_local(self, claim_data: Dict) -> Dict[str, Any]:
+        """Score claim based on inherent characteristics (no LLM)."""
         flags = []
         score = 0
         
@@ -195,15 +197,19 @@ class ScoringAgent:
         }
         return recommendations.get(risk_level, "REVIEW")
     
-    async def _generate_reasoning(self, score: float, risk_level: str, risk_factors: List[RiskFactor], claim_data: Dict) -> str:
-        factors_summary = "\n".join([f"- {f.name}: {f.score:.0f}/100" for f in risk_factors])
+    async def generate_reasoning(self, score_result: Dict[str, Any]) -> str:
+        """Generate LLM reasoning for a score result. Can be called in parallel with narrative."""
+        score = score_result.get("overall_score", 0)
+        risk_level = score_result.get("risk_level", "unknown")
+        risk_factors = score_result.get("risk_factors", [])
+        factors_summary = "\n".join([f"- {f.get('name','?')}: {f.get('score',0):.0f}/100" for f in risk_factors])
         prompt = f"""Explain fraud risk assessment in 2 sentences.
 SCORE: {score:.0f}/100, LEVEL: {risk_level.upper()}
 FACTORS:
 {factors_summary}
 Be professional and specific."""
-        
+
         try:
             return await self.nim_client.chat(messages=[{"role": "user", "content": prompt}], temperature=0.3, max_tokens=150)
-        except:
+        except Exception:
             return f"Claim scored {score:.0f}/100 based on {len(risk_factors)} factors."

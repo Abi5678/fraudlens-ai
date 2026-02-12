@@ -11,14 +11,29 @@ from openai import AsyncOpenAI
 from loguru import logger
 
 
-# API key resolved from environment or Streamlit secrets
-_BUILTIN_API_KEY = ""
-try:
-    import streamlit as st
-    if hasattr(st, "secrets") and "NVIDIA_API_KEY" in st.secrets:
-        _BUILTIN_API_KEY = st.secrets["NVIDIA_API_KEY"]
-except Exception:
-    pass
+# API key resolved from: env var → .env file → Streamlit secrets
+_BUILTIN_API_KEY = os.environ.get("NVIDIA_API_KEY", "")
+
+# Try loading from .env file if not in environment
+if not _BUILTIN_API_KEY:
+    try:
+        from dotenv import load_dotenv
+        from pathlib import Path
+        _env_path = Path(__file__).parent.parent / ".env"
+        if _env_path.exists():
+            load_dotenv(_env_path)
+            _BUILTIN_API_KEY = os.environ.get("NVIDIA_API_KEY", "")
+    except ImportError:
+        pass
+
+# Try Streamlit secrets as final fallback (for Streamlit Cloud)
+if not _BUILTIN_API_KEY:
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets") and "NVIDIA_API_KEY" in st.secrets:
+            _BUILTIN_API_KEY = st.secrets["NVIDIA_API_KEY"]
+    except Exception:
+        pass
 
 
 @dataclass
