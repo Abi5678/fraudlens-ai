@@ -6,9 +6,26 @@ Uses TensorRT for optimized inference when available
 from typing import Dict, Any, List
 from pathlib import Path
 import base64
+import sys
 from loguru import logger
 
 from core.nim_client import get_nim_client
+
+# Process-level: after one 404 from NIM vision, skip all further NIM vision calls (avoids many 404s when many images).
+_nim_vision_unavailable = False
+
+
+def _is_nim_vision_unavailable() -> bool:
+    """Read flag without assuming module global is defined (avoids NameError on stale import)."""
+    mod = sys.modules.get(__name__)
+    return getattr(mod, "_nim_vision_unavailable", False)
+
+
+def _set_nim_vision_unavailable() -> None:
+    """Set flag so we skip NIM vision for rest of process."""
+    mod = sys.modules.get(__name__)
+    if mod is not None:
+        setattr(mod, "_nim_vision_unavailable", True)
 
 
 class DeepfakeAgent:
@@ -117,8 +134,7 @@ class DeepfakeAgent:
     
     async def _analyze_image_bytes(self, image_data: bytes, context: str = None) -> Dict[str, Any]:
         """Analyze image from bytes using multimodal LLM"""
-        global _nim_vision_unavailable
-        if _nim_vision_unavailable:
+        if _is_nim_vision_unavailable():
             return {"score": 0, "detections": [], "nim_unavailable": True}
         
         # Encode image for API
@@ -200,7 +216,7 @@ Provide:
             err_str = str(e).lower()
             # NIM 404 = image/multimodal model not available for this account; skip to avoid spam
             if "404" in err_str or "not found" in err_str:
-                _nim_vision_unavailable = True
+                _set_nim_vision_unavailable()
                 logger.warning("Image model not available (404); skipping NIM vision for remaining images this process")
                 return {"score": 0, "detections": [], "nim_unavailable": True}
             logger.warning(f"Image analysis error: {e}")
