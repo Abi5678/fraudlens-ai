@@ -1,11 +1,4 @@
----
-title: FraudLens AI
-emoji: 🛡️
-colorFrom: blue
-colorTo: green
-sdk: docker
-app_port: 8501
----
+
 
 # 🛡️ FraudLens AI v2 — NVIDIA Edition
 
