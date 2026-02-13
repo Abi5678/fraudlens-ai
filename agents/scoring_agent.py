@@ -5,7 +5,7 @@ Supports RIGID_SCORING (env): stricter thresholds and conservative recommendatio
 """
 
 import os
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
 from loguru import logger
 
@@ -91,16 +91,22 @@ class ScoringAgent:
         deepfake_results: Dict[str, Any] = None,
         id_consistency_results: Dict[str, Any] = None,
         raw_text: str = "",
+        weights: Optional[Dict[str, float]] = None,
     ) -> Dict[str, Any]:
         """Calculate overall fraud score locally (no LLM call).
 
         The reasoning LLM call is separated out so orchestrators
         can run it in parallel with narrative generation.
         When id_consistency_results is provided (Photo ID flow), uses WEIGHTS_ID.
+        If weights is provided, uses it for keys present; missing keys use default.
         """
         logger.info("ScoringAgent calculating fraud score")
         use_id_weights = id_consistency_results is not None
-        weights = self.WEIGHTS_ID if use_id_weights else self.WEIGHTS
+        base_weights = self.WEIGHTS_ID if use_id_weights else self.WEIGHTS
+        if weights is not None:
+            weights = {k: weights.get(k, base_weights[k]) for k in base_weights}
+        else:
+            weights = base_weights
         # Support raw_text from param or from claim_data (e.g. medical flow)
         raw_text = raw_text or claim_data.get("_raw_text", "")
 
@@ -135,19 +141,37 @@ class ScoringAgent:
                     evidence=network_results.get("connections", [])[:3],
                 ))
 
-            # Deepfake / Image Authenticity Score (in ID flow, include AI-generated score)
-            if deepfake_results and deepfake_results.get("status") == "success":
-                df_score = deepfake_results.get("manipulation_score", 0)
-                if use_id_weights and "ai_generated_score" in deepfake_results:
-                    df_score = max(df_score, deepfake_results.get("ai_generated_score", 0))
-                df_detections = deepfake_results.get("detections", [])
-                if use_id_weights and deepfake_results.get("ai_generated_detected"):
-                    df_detections = ["ai_generated"] + [d for d in df_detections if d != "ai_generated"]
+            # Deepfake / Image Authenticity Score (in ID flow, include AI-generated score).
+            # When status is success: use real score. When skipped/error (e.g. NIM 404): add factor with score 0 so total weight and scale match previous behavior (score ~30 for same doc).
+            if deepfake_results and not use_id_weights:
+                df_status = deepfake_results.get("status", "")
+                df_score = deepfake_results.get("manipulation_score", 0) if df_status == "success" else 0
+                df_detections = deepfake_results.get("detections", []) if df_status == "success" else []
+                df_summary = deepfake_results.get("summary", "") if df_status == "success" else (deepfake_results.get("message", "Skipped") or "Image model unavailable")
                 risk_factors.append(RiskFactor(
                     name="Image Authenticity",
                     score=df_score,
                     weight=weights["deepfake"],
-                    description=deepfake_results.get("summary", ""),
+                    description=df_summary,
+                    evidence=[d.replace("_", " ").title() for d in df_detections[:3]],
+                ))
+            elif deepfake_results and use_id_weights:
+                df_status = deepfake_results.get("status", "")
+                if df_status == "success":
+                    df_score = deepfake_results.get("manipulation_score", 0)
+                    if "ai_generated_score" in deepfake_results:
+                        df_score = max(df_score, deepfake_results.get("ai_generated_score", 0))
+                    df_detections = deepfake_results.get("detections", [])
+                    if deepfake_results.get("ai_generated_detected"):
+                        df_detections = ["ai_generated"] + [d for d in df_detections if d != "ai_generated"]
+                else:
+                    df_score = 0
+                    df_detections = []
+                risk_factors.append(RiskFactor(
+                    name="Image Authenticity",
+                    score=df_score,
+                    weight=weights["deepfake"],
+                    description=deepfake_results.get("summary", "") if df_status == "success" else "Skipped",
                     evidence=[d.replace("_", " ").title() for d in df_detections[:3]],
                 ))
 
@@ -173,7 +197,7 @@ class ScoringAgent:
                 evidence=claim_score["flags"],
             ))
 
-            # Calculate weighted overall score
+            # Weighted overall score (raw sum). When deepfake is skipped (e.g. NIM 404), we still add Image Authenticity with score 0 so the scale matches previous runs (~30 for same doc).
             overall_score = sum(f.score * f.weight for f in risk_factors)
             # Rigid mode: small upward nudge for ID flow so borderline cases tip to next level
             if _is_rigid() and use_id_weights and overall_score > 0 and overall_score < 50:

@@ -89,39 +89,53 @@ class VectorStore:
         
         logger.info(f"VectorStore initialized: {collection_name}")
     
-    async def initialize(self):
-        """Initialize Milvus connection and collection"""
+    async def initialize(self) -> bool:
+        """Initialize Milvus connection and collection. Returns True if a new collection was created."""
+        created_new = False
         try:
             if self.use_lite:
-                # Use Milvus Lite for local development
+                # Use Milvus Lite for local development (may start a local server; retry until ready)
                 from pymilvus import MilvusClient, DataType
                 from pathlib import Path
+                import asyncio
 
-                # Use absolute path so it works regardless of cwd (e.g. Streamlit)
                 base = Path(__file__).parent.parent
                 db_path = str(base / f"{self.collection_name}.db")
-                self._client = MilvusClient(db_path)
+                last_err = None
+                for attempt in range(5):
+                    try:
+                        self._client = MilvusClient(uri=db_path)
+                        # Prove connection works
+                        _ = self._client.has_collection(self.collection_name)
+                        break
+                    except Exception as e:
+                        last_err = e
+                        if attempt < 4:
+                            logger.warning(f"Milvus Lite not ready (attempt {attempt + 1}/5), retrying in 2s: {e}")
+                            await asyncio.sleep(2)
+                        else:
+                            raise last_err
 
-                # Drop and recreate if schema mismatch
-                if self._client.has_collection(self.collection_name):
-                    self._client.drop_collection(self.collection_name)
+                # Use existing collection if present (avoids "file has been opened" / lock from drop+recreate)
+                if not self._client.has_collection(self.collection_name):
+                    schema = self._client.create_schema(auto_id=False)
+                    schema.add_field("id", DataType.VARCHAR, is_primary=True, max_length=256)
+                    schema.add_field("text", DataType.VARCHAR, max_length=65535)
+                    schema.add_field("vector", DataType.FLOAT_VECTOR, dim=self.embedding_service.dimension)
+                    schema.add_field("metadata", DataType.JSON)
 
-                # Create collection with explicit string ID schema
-                schema = self._client.create_schema(auto_id=False)
-                schema.add_field("id", DataType.VARCHAR, is_primary=True, max_length=256)
-                schema.add_field("text", DataType.VARCHAR, max_length=65535)
-                schema.add_field("vector", DataType.FLOAT_VECTOR, dim=self.embedding_service.dimension)
-                schema.add_field("metadata", DataType.JSON)
+                    index_params = self._client.prepare_index_params()
+                    index_params.add_index(field_name="vector", metric_type="COSINE")
 
-                index_params = self._client.prepare_index_params()
-                index_params.add_index(field_name="vector", metric_type="COSINE")
-
-                self._client.create_collection(
-                    collection_name=self.collection_name,
-                    schema=schema,
-                    index_params=index_params,
-                )
-                logger.info(f"Created collection: {self.collection_name}")
+                    self._client.create_collection(
+                        collection_name=self.collection_name,
+                        schema=schema,
+                        index_params=index_params,
+                    )
+                    logger.info(f"Created collection: {self.collection_name}")
+                    created_new = True
+                else:
+                    logger.info(f"Using existing collection: {self.collection_name}")
             else:
                 # Use full Milvus server
                 from pymilvus import connections, Collection, FieldSchema, CollectionSchema, DataType
@@ -156,6 +170,7 @@ class VectorStore:
                 self._collection.load()
                 
             logger.info("VectorStore initialized successfully")
+            return created_new
             
         except Exception as e:
             logger.error(f"VectorStore initialization error: {e}")

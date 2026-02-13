@@ -58,9 +58,17 @@ class InconsistencyAgent:
         logger.info("InconsistencyAgent analyzing claim")
         
         try:
-            # Run multiple analysis passes
-            timeline_issues = await self._check_timeline(claim_data, raw_text)
-            logical_issues = await self._check_logical_consistency(claim_data, raw_text)
+            # Run multiple analysis passes; don't let NIM failures kill the whole run
+            timeline_issues = []
+            logical_issues = []
+            try:
+                timeline_issues = await self._check_timeline(claim_data, raw_text)
+            except Exception as e:
+                logger.warning(f"InconsistencyAgent timeline check failed: {e}")
+            try:
+                logical_issues = await self._check_logical_consistency(claim_data, raw_text)
+            except Exception as e:
+                logger.warning(f"InconsistencyAgent logical check failed: {e}")
             numerical_issues = await self._check_numerical_consistency(claim_data)
             
             # Combine all inconsistencies
@@ -79,12 +87,27 @@ class InconsistencyAgent:
             
         except Exception as e:
             logger.error(f"InconsistencyAgent error: {e}")
-            return {
-                "status": "error",
-                "error": str(e),
-                "inconsistencies": [],
-                "inconsistency_score": 0,
-            }
+            # Still try numerical-only so we don't return 0 when only NIM failed
+            try:
+                numerical_issues = await self._check_numerical_consistency(claim_data)
+                score = self._calculate_score(numerical_issues)
+                if score == 0:
+                    score = 10.0  # Small baseline so total score isn't killed when LLM is down
+                return {
+                    "status": "fallback",
+                    "error": str(e),
+                    "inconsistencies": [i.to_dict() for i in numerical_issues],
+                    "inconsistency_count": len(numerical_issues),
+                    "inconsistency_score": score,
+                    "summary": self._generate_summary(numerical_issues) or "LLM checks unavailable; numerical check only.",
+                }
+            except Exception:
+                return {
+                    "status": "error",
+                    "error": str(e),
+                    "inconsistencies": [],
+                    "inconsistency_score": 0,
+                }
     
     async def _check_timeline(self, claim_data: Dict, raw_text: str) -> List[Inconsistency]:
         """Check for timeline impossibilities"""

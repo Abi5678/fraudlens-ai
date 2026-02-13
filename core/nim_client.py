@@ -45,6 +45,9 @@ class NIMConfig:
     embedding_model: str = "nvidia/nv-embedqa-e5-v5"
     rerank_model: str = "nvidia/nv-rerankqa-mistral-4b-v3"
     parse_model: str = "nvidia/nemotron-parse"
+    # Vision/multimodal model for image analysis (deepfake, etc.). Use a model from the integrate API catalog
+    # (e.g. meta/llama-3.2-11b-vision-instruct) to avoid "Function not found" 404 for your account.
+    vision_model: str = "meta/llama-3.2-11b-vision-instruct"
     timeout: float = 120.0
 
 
@@ -63,6 +66,7 @@ class NIMClient:
                 llm_model=os.environ.get("NIM_MODEL", "meta/llama-3.3-70b-instruct"),
                 embedding_model=os.environ.get("EMBEDDING_MODEL", "nvidia/nv-embedqa-e5-v5"),
                 rerank_model=os.environ.get("RERANK_MODEL", "nvidia/nv-rerankqa-mistral-4b-v3"),
+                vision_model=os.environ.get("NIM_VISION_MODEL", "meta/llama-3.2-11b-vision-instruct"),
             )
         
         self.config = config

@@ -73,7 +73,8 @@ class FraudLensAI:
 
     async def analyze_json(self, claim_json_path: str, image_paths: list = None,
                            include_network: bool = True,
-                           include_deepfake: bool = True) -> "FraudAnalysisResult":
+                           include_deepfake: bool = True,
+                           score_weights: Optional[Dict[str, float]] = None) -> "FraudAnalysisResult":
         """Analyze a claim from a JSON file (bypasses document extraction)."""
         logger.info(f"Starting fraud analysis from JSON: {claim_json_path}")
         with open(claim_json_path, "r") as f:
@@ -83,12 +84,13 @@ class FraudLensAI:
         raw_text = data.get("raw_text", json.dumps(claim_data, indent=2))
 
         return await self._run_analysis(
-            claim_data, raw_text, image_paths or [], include_network, include_deepfake
+            claim_data, raw_text, image_paths or [], include_network, include_deepfake, score_weights
         )
 
     async def analyze(self, document_path: str, image_paths: list = None,
                       include_network: bool = True,
-                      include_deepfake: bool = True) -> "FraudAnalysisResult":
+                      include_deepfake: bool = True,
+                      score_weights: Optional[Dict[str, float]] = None) -> "FraudAnalysisResult":
         """Analyze an insurance claim document for fraud."""
         logger.info(f"Starting fraud analysis for: {document_path}")
 
@@ -97,7 +99,7 @@ class FraudLensAI:
         # Support direct JSON input
         if path.suffix.lower() == ".json":
             return await self.analyze_json(
-                document_path, image_paths, include_network, include_deepfake
+                document_path, image_paths, include_network, include_deepfake, score_weights
             )
 
         # Phase 1: Document Extraction (now also extracts images)
@@ -113,7 +115,7 @@ class FraudLensAI:
         logger.info(f"Total images for analysis: {len(all_image_paths)} ({len(extracted_images)} extracted from document)")
 
         result = await self._run_analysis(
-            claim_data, raw_text, all_image_paths, include_network, include_deepfake
+            claim_data, raw_text, all_image_paths, include_network, include_deepfake, score_weights
         )
         result.extracted_images = extracted_images
         result.raw_text = raw_text
@@ -122,7 +124,8 @@ class FraudLensAI:
     async def _run_analysis(self, claim_data: Dict, raw_text: str,
                             image_paths: list = None,
                             include_network: bool = True,
-                            include_deepfake: bool = True) -> "FraudAnalysisResult":
+                            include_deepfake: bool = True,
+                            score_weights: Optional[Dict[str, float]] = None) -> "FraudAnalysisResult":
         """Core analysis pipeline shared by all entry points."""
         # Phase 2: Parallel Analysis
         tasks = [
@@ -172,6 +175,7 @@ class FraudLensAI:
             claim_data, inconsistency_result, pattern_result,
             network_result, deepfake_result,
             raw_text=raw_text,
+            weights=score_weights,
         )
 
         # Phase 4: Reasoning + Narrative in PARALLEL (saves ~3-5s)

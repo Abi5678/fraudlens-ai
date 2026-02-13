@@ -47,11 +47,14 @@ class DeepfakeAgent:
                 return {"status": "skipped", "message": "No images provided", "manipulation_score": 0}
             
             results = []
+            nim_unavailable = False  # set if first image gets 404 so we skip NIM for rest
             
             if image_paths:
                 for path in image_paths:
-                    result = await self._analyze_image(Path(path), context=context)
+                    result = await self._analyze_image(Path(path), context=context, skip_nim_if_unavailable=nim_unavailable)
                     results.append(result)
+                    if result.get("nim_unavailable"):
+                        nim_unavailable = True
             
             if image_data:
                 result = await self._analyze_image_bytes(image_data, context=context)
@@ -60,6 +63,10 @@ class DeepfakeAgent:
             # Aggregate results
             if not results:
                 return {"status": "success", "manipulation_score": 0, "images_analyzed": 0}
+            
+            # If NIM image model was unavailable (404), return skipped so scorer can renormalize weights
+            if any(r.get("nim_unavailable") for r in results):
+                return {"status": "skipped", "message": "Image model not available (404)", "manipulation_score": 0, "images_analyzed": len(results)}
             
             avg_score = sum(r.get("score", 0) for r in results) / len(results)
             detections = [d for r in results for d in r.get("detections", [])]
@@ -92,21 +99,27 @@ class DeepfakeAgent:
             logger.error(f"DeepfakeAgent error: {e}")
             return {"status": "error", "error": str(e), "manipulation_score": 0}
     
-    async def _analyze_image(self, image_path: Path, context: str = None) -> Dict[str, Any]:
-        """Analyze a single image file"""
+    async def _analyze_image(self, image_path: Path, context: str = None, skip_nim_if_unavailable: bool = False) -> Dict[str, Any]:
+        """Analyze a single image file. If skip_nim_if_unavailable, only run basic checks (no NIM call)."""
         if not image_path.exists():
             return {"path": str(image_path), "error": "File not found", "score": 0}
         
-        # Read and encode image
         with open(image_path, "rb") as f:
             image_data = f.read()
         
+        if skip_nim_if_unavailable:
+            result = await self._basic_checks(image_data)
+            result["path"] = str(image_path)
+            return result
         result = await self._analyze_image_bytes(image_data, context=context)
         result["path"] = str(image_path)
         return result
     
     async def _analyze_image_bytes(self, image_data: bytes, context: str = None) -> Dict[str, Any]:
         """Analyze image from bytes using multimodal LLM"""
+        global _nim_vision_unavailable
+        if _nim_vision_unavailable:
+            return {"score": 0, "detections": [], "nim_unavailable": True}
         
         # Encode image for API
         encoded = base64.b64encode(image_data).decode()
@@ -150,6 +163,7 @@ Provide:
 - Confidence in assessment"""
 
         try:
+            vision_model = getattr(self.nim_client.config, "vision_model", "meta/llama-3.2-11b-vision-instruct")
             response = await self.nim_client.chat(
                 messages=[{
                     "role": "user",
@@ -158,7 +172,7 @@ Provide:
                         {"type": "text", "text": prompt}
                     ]
                 }],
-                model="nvidia/nemotron-4-340b-instruct",
+                model=vision_model,
                 max_tokens=600,
             )
             
@@ -183,8 +197,13 @@ Provide:
             return result
             
         except Exception as e:
+            err_str = str(e).lower()
+            # NIM 404 = image/multimodal model not available for this account; skip to avoid spam
+            if "404" in err_str or "not found" in err_str:
+                _nim_vision_unavailable = True
+                logger.warning("Image model not available (404); skipping NIM vision for remaining images this process")
+                return {"score": 0, "detections": [], "nim_unavailable": True}
             logger.warning(f"Image analysis error: {e}")
-            # Fallback to basic checks
             return await self._basic_checks(image_data)
     
     def _parse_ai_generated_id_response(self, response: str, fallback_score: float) -> tuple:

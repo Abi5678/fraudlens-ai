@@ -48,6 +48,12 @@ Thumbs.db
 # Milvus
 *.milvus
 fraud_patterns.db
+*.lock
+
+# Eval: generated results and local data (reproduce via README)
+eval/data/
+eval/results*.json
+eval/__pycache__/
 
 # Test artifacts
 test_report.json

@@ -68,7 +68,7 @@ class MedicalClaimLensAI:
 
         logger.info("MedicalClaimLens AI initialized")
 
-    async def analyze(self, document_path: str) -> MedicalAnalysisResult:
+    async def analyze(self, document_path: str, score_weights: Optional[Dict[str, float]] = None) -> MedicalAnalysisResult:
         """Analyze medical insurance claim documents for fraud."""
         logger.info(f"Starting medical claim analysis for: {document_path}")
 
@@ -132,6 +132,7 @@ class MedicalClaimLensAI:
             pattern_result,
             None,
             None,
+            weights=score_weights,
         )
 
         # Phase 4: Reasoning + Narrative in parallel

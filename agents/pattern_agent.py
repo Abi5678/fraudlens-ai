@@ -8,12 +8,12 @@ from dataclasses import dataclass
 from loguru import logger
 
 from core.nim_client import get_nim_client
-from core.embedding_service import VectorStore, EmbeddingService, SearchResult
+from core.embedding_service import VectorStore, EmbeddingService, SearchResult, FRAUD_PATTERNS
 
 
 @dataclass
 class PatternMatch:
-    """A matched fraud pattern"""
+    """A matched fraud pattern with optional RAG rationale (why this pattern hit)."""
     pattern_id: str
     pattern_name: str
     description: str
@@ -21,6 +21,7 @@ class PatternMatch:
     category: str
     severity: str
     matching_elements: List[str]
+    rationale: str = ""  # Explainability: why this RAG hit applies (from LLM analysis)
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -31,6 +32,7 @@ class PatternMatch:
             "category": self.category,
             "severity": self.severity,
             "matching_elements": self.matching_elements,
+            "rationale": self.rationale,
         }
 
 
@@ -56,11 +58,11 @@ class PatternAgent:
                 collection_name="fraud_patterns",
                 embedding_service=self.embedding_service,
             )
-            await self.vector_store.initialize()
-            
-            # Load default patterns
-            from core.embedding_service import initialize_fraud_patterns
-            await initialize_fraud_patterns(self.vector_store)
+            created = await self.vector_store.initialize()
+            # Load default patterns only when collection was just created (avoid duplicate inserts)
+            if created:
+                from core.embedding_service import initialize_fraud_patterns
+                await initialize_fraud_patterns(self.vector_store)
     
     async def analyze(
         self,
@@ -113,12 +115,53 @@ class PatternAgent:
             
         except Exception as e:
             logger.error(f"PatternAgent error: {e}")
-            return {
-                "status": "error",
-                "error": str(e),
-                "matched_patterns": [],
-                "pattern_risk_score": 0,
-            }
+            return await self._fallback_analyze(claim_data, raw_text, str(e))
+    
+    async def _fallback_analyze(
+        self, claim_data: Dict, raw_text: str, error_message: str = ""
+    ) -> Dict[str, Any]:
+        """When vector store/embedding fails, use keyword match so score is not zero."""
+        query = self._build_search_query(claim_data, raw_text)
+        text_lower = (query + " " + (raw_text or "")[:2000]).lower()
+        matches = []
+        for p in FRAUD_PATTERNS:
+            # Simple keyword match: pattern category words + a few key terms from text
+            category = (p.get("metadata") or {}).get("category", "")
+            severity = (p.get("metadata") or {}).get("severity", "medium")
+            text = (p.get("text") or "").lower()
+            keywords = [w for w in category.replace("_", " ").split() if len(w) > 3]
+            keywords.extend([w for w in text.split() if len(w) > 5][:8])
+            if any(kw in text_lower for kw in keywords):
+                matches.append({
+                    "pattern_id": p.get("id", ""),
+                    "pattern_name": category,
+                    "description": p.get("text", ""),
+                    "similarity_score": 0.4,
+                    "category": category,
+                    "severity": severity,
+                    "matching_elements": [],
+                    "rationale": "Keyword fallback (vector search unavailable).",
+                })
+        pattern_score = self._calculate_pattern_score_from_dicts(matches)
+        return {
+            "status": "fallback",
+            "matched_patterns": matches[:5],
+            "pattern_count": len(matches),
+            "pattern_risk_score": pattern_score,
+            "top_pattern": matches[0] if matches else None,
+            "summary": "Pattern search unavailable; used keyword fallback. " + (error_message[:80] if error_message else ""),
+        }
+    
+    def _calculate_pattern_score_from_dicts(self, matches: List[Dict[str, Any]]) -> float:
+        """Score from list of match dicts (fallback path)."""
+        if not matches:
+            return 15.0  # Neutral baseline so total score is not killed
+        severity_weights = {"critical": 1.0, "high": 0.7, "medium": 0.4, "low": 0.2}
+        total = 0
+        for m in matches[:5]:
+            w = severity_weights.get(m.get("severity", "medium"), 0.4)
+            total += (m.get("similarity_score", 0.4) or 0.4) * w * 25
+        return min(100, 15 + total)
     
     def _build_search_query(self, claim_data: Dict, raw_text: str) -> str:
         """Build semantic search query from claim data"""
@@ -169,7 +212,7 @@ class PatternAgent:
             if result.score < 0.2:
                 continue
             
-            # Use LLM to analyze the match
+            # Use LLM to analyze the match (rationale for explainability)
             analysis = await self._analyze_match(result, claim_data, raw_text)
             
             match = PatternMatch(
@@ -180,6 +223,7 @@ class PatternAgent:
                 category=result.metadata.get("category", "general"),
                 severity=result.metadata.get("severity", "medium"),
                 matching_elements=analysis.get("matching_elements", []),
+                rationale=analysis.get("rationale", ""),
             )
             
             matches.append(match)
@@ -227,7 +271,7 @@ Format:
                 max_tokens=500,
             )
             
-            # Parse matching elements
+            # Parse matching elements and keep full response as rationale (explainability)
             elements = []
             for line in response.split("\n"):
                 line = line.strip()
@@ -236,11 +280,14 @@ Format:
                     if element and len(element) > 10:
                         elements.append(element)
             
-            return {"matching_elements": elements[:5]}  # Limit to top 5
+            return {
+                "matching_elements": elements[:5],
+                "rationale": response.strip()[:2000],  # RAG hit rationale for explainability
+            }
             
         except Exception as e:
             logger.warning(f"Match analysis error: {e}")
-            return {"matching_elements": []}
+            return {"matching_elements": [], "rationale": ""}
     
     def _calculate_pattern_score(self, matches: List[PatternMatch]) -> float:
         """Calculate overall pattern risk score (0-100)"""

@@ -9,7 +9,6 @@ Verticals:
 """
 
 import streamlit as st
-import streamlit.components.v1 as components
 from pathlib import Path
 import sys
 
@@ -410,45 +409,6 @@ def render_sidebar():
             <div style="font-size: 10px; color: #3a3a4a;">NVIDIA GTC 2026</div>
         </div>
         """, unsafe_allow_html=True)
-
-        # Sidebar toggle button — inject into parent DOM via JS
-        components.html("""
-        <script>
-        (function() {
-            var doc = window.parent.document;
-            if (doc.getElementById('fl-sidebar-toggle')) return;
-
-            var style = doc.createElement('style');
-            style.textContent = '#fl-sidebar-toggle{position:fixed;top:12px;left:292px;z-index:999999;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:#16161e;border:1px solid rgba(255,255,255,0.08);border-radius:8px;cursor:pointer;color:#7a7a90;transition:all .3s cubic-bezier(.4,0,.2,1);box-shadow:0 2px 8px rgba(0,0,0,0.3)}#fl-sidebar-toggle:hover{color:#76B900;border-color:rgba(118,185,0,0.4);background:#1e1e28;box-shadow:0 2px 12px rgba(118,185,0,0.15)}#fl-sidebar-toggle.fl-collapsed{left:12px}';
-            doc.head.appendChild(style);
-
-            var btn = doc.createElement('div');
-            btn.id = 'fl-sidebar-toggle';
-            btn.title = 'Toggle sidebar';
-            btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>';
-            doc.body.appendChild(btn);
-
-            var hidden = false;
-            btn.addEventListener('click', function() {
-                var sb = doc.querySelector('section[data-testid="stSidebar"]');
-                if (!sb) return;
-                hidden = !hidden;
-                if (hidden) {
-                    sb.classList.add('fl-sidebar-hidden');
-                    sb.classList.remove('fl-sidebar-visible');
-                    btn.classList.add('fl-collapsed');
-                } else {
-                    sb.classList.remove('fl-sidebar-hidden');
-                    sb.classList.add('fl-sidebar-visible');
-                    btn.classList.remove('fl-collapsed');
-                }
-            });
-
-            var sb = doc.querySelector('section[data-testid="stSidebar"]');
-            if (sb) { sb.classList.add('fl-sidebar-visible'); sb.style.transform = 'none'; }
-        })();
-        </script>
-        """, height=0)
 
     return vertical_key
 
