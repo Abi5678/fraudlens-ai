@@ -205,9 +205,10 @@ class NIMClient:
 
         except Exception as e:
             logger.warning(f"NIM rerank unavailable ({e}), falling back to passthrough ordering")
-            # Graceful fallback: return passages in original order with synthetic scores
+            # Graceful fallback: return passages in original order with neutral scores.
+            # Use 0.5 (not 1.0) since we cannot confirm relevance without reranking.
             return [
-                {"text": p, "score": 1.0 - (i * 0.05), "index": i}
+                {"text": p, "score": max(0.1, 0.5 - (i * 0.03)), "index": i}
                 for i, p in enumerate(passages[:top_k])
             ]
     

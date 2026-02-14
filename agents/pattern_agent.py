@@ -155,13 +155,13 @@ class PatternAgent:
     def _calculate_pattern_score_from_dicts(self, matches: List[Dict[str, Any]]) -> float:
         """Score from list of match dicts (fallback path)."""
         if not matches:
-            return 15.0  # Neutral baseline so total score is not killed
+            return 0.0  # No matches = no pattern risk. Weight renormalization handles agent gaps.
         severity_weights = {"critical": 1.0, "high": 0.7, "medium": 0.4, "low": 0.2}
         total = 0
         for m in matches[:5]:
             w = severity_weights.get(m.get("severity", "medium"), 0.4)
             total += (m.get("similarity_score", 0.4) or 0.4) * w * 25
-        return min(100, 15 + total)
+        return min(100, total)
     
     def _build_search_query(self, claim_data: Dict, raw_text: str) -> str:
         """Build semantic search query from claim data"""
@@ -290,25 +290,38 @@ Format:
             return {"matching_elements": [], "rationale": ""}
     
     def _calculate_pattern_score(self, matches: List[PatternMatch]) -> float:
-        """Calculate overall pattern risk score (0-100)"""
+        """Calculate overall pattern risk score (0-100).
+
+        Uses the best match as anchor and adds diminishing bonuses for
+        additional matches, avoiding runaway additive inflation.
+        """
         if not matches:
             return 0.0
-        
+
         severity_multipliers = {
             "critical": 2.0,
             "high": 1.5,
             "medium": 1.0,
             "low": 0.5,
         }
-        
-        score = 0
+
+        # Score each match individually (0-100 scale per match)
+        match_scores = []
         for match in matches:
             multiplier = severity_multipliers.get(match.severity, 1.0)
-            # Weight by similarity and number of matching elements
-            match_score = match.similarity_score * multiplier * (1 + len(match.matching_elements) * 0.1)
-            score += match_score * 20  # Scale to 0-100 range
-        
-        # Cap at 100
+            # Base: similarity * severity * element bonus, scaled to 0-100
+            base = match.similarity_score * multiplier * (1 + len(match.matching_elements) * 0.1)
+            match_scores.append(min(100, base * 50))
+
+        if not match_scores:
+            return 0.0
+
+        # Best match dominates; additional matches add diminishing bonuses
+        match_scores.sort(reverse=True)
+        score = match_scores[0]
+        for i, s in enumerate(match_scores[1:], start=1):
+            score += s * (0.3 / i)  # 2nd adds 30%, 3rd adds 15%, etc.
+
         return min(100, score)
     
     def _generate_summary(self, matches: List[PatternMatch]) -> str:

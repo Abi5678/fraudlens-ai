@@ -91,8 +91,8 @@ class InconsistencyAgent:
             try:
                 numerical_issues = await self._check_numerical_consistency(claim_data)
                 score = self._calculate_score(numerical_issues)
-                if score == 0:
-                    score = 10.0  # Small baseline so total score isn't killed when LLM is down
+                # Don't inflate: if numerical checks genuinely found nothing, score stays 0.
+                # Weight renormalization in the scorer handles agent gaps correctly.
                 return {
                     "status": "fallback",
                     "error": str(e),
@@ -220,77 +220,133 @@ If no logical contradictions found, state "No logical contradictions detected."
         return inconsistencies
     
     def _parse_inconsistencies(self, response: str, inconsistency_type: str) -> List[Inconsistency]:
-        """Parse LLM response into Inconsistency objects"""
-        
+        """Parse LLM response into Inconsistency objects.
+
+        Handles numbered lists, bullet points, and Description:/Severity:/Evidence: blocks.
+        """
+        import re
+
         inconsistencies = []
-        
-        # Check if no inconsistencies found
-        if "no" in response.lower() and ("inconsistenc" in response.lower() or "contradiction" in response.lower()):
+
+        # Check if no inconsistencies found — require phrase boundary so "notable" doesn't match
+        resp_lower = response.lower()
+        no_found_phrases = [
+            "no timeline inconsistencies detected",
+            "no logical contradictions detected",
+            "no inconsistencies detected",
+            "no contradictions detected",
+            "no significant inconsistencies",
+            "no significant contradictions",
+            "no issues found",
+        ]
+        if any(phrase in resp_lower for phrase in no_found_phrases):
             return []
-        
-        # Parse response for inconsistency patterns
+
         lines = response.split("\n")
         current = None
-        
+
+        def _detect_severity(text: str) -> str:
+            t = text.lower()
+            # Only match severity when it looks like a label, not just a word in a sentence
+            if re.search(r'\b(severity|level)\s*[:\-–]\s*critical\b', t) or t.strip().lower() in ("critical",):
+                return "critical"
+            if re.search(r'\b(severity|level)\s*[:\-–]\s*high\b', t) or t.strip().lower() in ("high",):
+                return "high"
+            if re.search(r'\b(severity|level)\s*[:\-–]\s*medium\b', t) or t.strip().lower() in ("medium",):
+                return "medium"
+            if re.search(r'\b(severity|level)\s*[:\-–]\s*low\b', t) or t.strip().lower() in ("low",):
+                return "low"
+            return ""
+
+        def _infer_severity_from_desc(desc: str) -> str:
+            """Infer severity from description keywords when LLM doesn't label it."""
+            d = desc.lower()
+            if any(kw in d for kw in ["impossible", "critical", "fabricat", "forged"]):
+                return "critical"
+            if any(kw in d for kw in ["suspicious", "significant", "no police", "no witness", "fled", "delay"]):
+                return "high"
+            if any(kw in d for kw in ["unusual", "gap", "mismatch", "discrepanc"]):
+                return "medium"
+            return "medium"
+
+        def _save_current():
+            nonlocal current
+            if current and current.description and len(current.description) > 5:
+                if current.severity == "medium":
+                    current.severity = _infer_severity_from_desc(current.description)
+                inconsistencies.append(current)
+            current = None
+
         for line in lines:
             line = line.strip()
             if not line:
                 continue
-            
+
             line_lower = line.lower()
-            
-            # Look for severity indicators
-            if any(s in line_lower for s in ["critical", "high", "medium", "low"]):
-                if "critical" in line_lower:
-                    severity = "critical"
-                elif "high" in line_lower:
-                    severity = "high"
-                elif "medium" in line_lower:
-                    severity = "medium"
-                else:
-                    severity = "low"
-                
-                if current:
-                    current.severity = severity
-            
-            # Look for description patterns
-            elif "description" in line_lower and ":" in line:
-                desc = line.split(":", 1)[1].strip()
-                if current is None:
-                    current = Inconsistency(
-                        type=inconsistency_type,
-                        description=desc,
-                        severity="medium",
-                        confidence=0.8,
-                    )
-                else:
-                    current.description = desc
-            
-            # Look for evidence
-            elif "evidence" in line_lower and ":" in line:
-                evidence = line.split(":", 1)[1].strip()
-                if current:
+
+            # Severity label on its own line (e.g. "Severity: high")
+            sev = _detect_severity(line)
+            if sev and current:
+                current.severity = sev
+                continue
+
+            # Description: prefix
+            if re.match(r'(?i)^-?\s*description\s*:', line):
+                desc = re.split(r':\s*', line, maxsplit=1)[1].strip() if ':' in line else ""
+                if desc:
+                    if current is None:
+                        current = Inconsistency(type=inconsistency_type, description=desc, severity="medium", confidence=0.8)
+                    else:
+                        current.description = desc
+                continue
+
+            # Evidence: prefix
+            if re.match(r'(?i)^-?\s*evidence\s*:', line):
+                evidence = re.split(r':\s*', line, maxsplit=1)[1].strip() if ':' in line else ""
+                if evidence and current:
                     current.evidence.append(evidence)
-            
-            # Check for numbered items that might be inconsistencies
-            elif line[0].isdigit() and "." in line[:3]:
-                # Save previous if exists
-                if current and current.description:
-                    inconsistencies.append(current)
-                
-                # Start new inconsistency
-                desc = line.split(".", 1)[1].strip() if "." in line else line
-                current = Inconsistency(
-                    type=inconsistency_type,
-                    description=desc,
-                    severity="medium",
-                    confidence=0.75,
-                )
-        
-        # Don't forget the last one
-        if current and current.description:
-            inconsistencies.append(current)
-        
+                continue
+
+            # Numbered item: "1.", "2)", etc.
+            m_num = re.match(r'^(\d+)[.)]\s*(.*)', line)
+            if m_num:
+                _save_current()
+                desc = m_num.group(2).strip()
+                # Strip inline severity marker from description
+                inline_sev = "medium"
+                for sev_word in ["critical", "high", "medium", "low"]:
+                    if re.search(rf'\({sev_word}\)', desc, re.I) or re.search(rf'\b{sev_word}\s+severity\b', desc, re.I):
+                        inline_sev = sev_word
+                        desc = re.sub(rf'\s*\({sev_word}\)\s*', ' ', desc, flags=re.I).strip()
+                        break
+                if desc:
+                    current = Inconsistency(type=inconsistency_type, description=desc, severity=inline_sev, confidence=0.75)
+                continue
+
+            # Bullet item: "- ", "* ", "• "
+            m_bullet = re.match(r'^[-*•]\s+(.*)', line)
+            if m_bullet:
+                desc = m_bullet.group(1).strip()
+                # Skip sub-items that look like evidence (short, starts with quote)
+                if current and (len(desc) < 30 or desc.startswith('"')):
+                    current.evidence.append(desc)
+                    continue
+                _save_current()
+                inline_sev = "medium"
+                for sev_word in ["critical", "high", "medium", "low"]:
+                    if re.search(rf'\({sev_word}\)', desc, re.I):
+                        inline_sev = sev_word
+                        desc = re.sub(rf'\s*\({sev_word}\)\s*', ' ', desc, flags=re.I).strip()
+                        break
+                if desc and len(desc) > 10:
+                    current = Inconsistency(type=inconsistency_type, description=desc, severity=inline_sev, confidence=0.75)
+                continue
+
+            # Continuation line — append to current description if it's a long sentence
+            if current and len(line) > 15 and not line.endswith(":"):
+                current.description += " " + line
+
+        _save_current()
         return inconsistencies
     
     def _calculate_score(self, inconsistencies: List[Inconsistency]) -> float:

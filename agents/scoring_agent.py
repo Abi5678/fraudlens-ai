@@ -62,12 +62,11 @@ class ScoringAgent:
     """Calculates overall fraud risk score combining all agent outputs."""
     
     WEIGHTS = {
-        "inconsistency": 0.25,
+        "inconsistency": 0.30,
         "pattern_match": 0.25,
         "network_risk": 0.20,
-        "document_quality": 0.10,
         "claim_characteristics": 0.15,
-        "deepfake": 0.05,
+        "deepfake": 0.10,
     }
     # Photo ID flow: heavier weight on consistency and deepfake
     WEIGHTS_ID = {
@@ -197,7 +196,14 @@ class ScoringAgent:
                 evidence=claim_score["flags"],
             ))
 
-            # Weighted overall score (raw sum). When deepfake is skipped (e.g. NIM 404), we still add Image Authenticity with score 0 so the scale matches previous runs (~30 for same doc).
+            # Renormalize: scale weights so present factors sum to 1.0.
+            # This ensures the 0-100 scale is always fully utilized regardless
+            # of which agents ran (e.g. no images → no deepfake factor).
+            total_weight = sum(f.weight for f in risk_factors)
+            if total_weight > 0 and abs(total_weight - 1.0) > 0.01:
+                scale = 1.0 / total_weight
+                for f in risk_factors:
+                    f.weight = f.weight * scale
             overall_score = sum(f.score * f.weight for f in risk_factors)
             # Rigid mode: small upward nudge for ID flow so borderline cases tip to next level
             if _is_rigid() and use_id_weights and overall_score > 0 and overall_score < 50:
@@ -282,10 +288,16 @@ class ScoringAgent:
         return "low"
     
     def _calculate_confidence(self, risk_factors: List[RiskFactor]) -> float:
-        scores = [f.score for f in risk_factors if f.score > 0]
-        if not scores: return 0.5
-        avg = sum(scores) / len(scores)
-        variance = sum((s - avg) ** 2 for s in scores) / len(scores)
+        """Confidence in the assessment. Higher when factors agree; lower when they diverge."""
+        all_scores = [f.score for f in risk_factors]
+        if not all_scores:
+            return 0.5
+        # When all scores are 0 (or near 0), agents agree on low risk → high confidence
+        active_scores = [s for s in all_scores if s > 0]
+        if not active_scores:
+            return 0.85  # All agents agree: no risk
+        avg = sum(active_scores) / len(active_scores)
+        variance = sum((s - avg) ** 2 for s in active_scores) / len(active_scores)
         return max(0.5, min(0.95, 1 - (variance / 2500)))
     
     def _get_recommendation(self, risk_level: str) -> str:
