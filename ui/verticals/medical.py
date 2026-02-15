@@ -287,7 +287,7 @@ def render():
         input_path = str(temp_path)
     elif use_sample:
         input_path = str(sample_claim_path)
-        st.caption("Using demo sample claim (Jane Doe, Demo Medical Group). No real data.")
+        st.caption("Using demo sample claim (Robert Vasquez, Sunshine Spine & Recovery Center — $127,850 multi-provider PIP claim). Fictional data.")
 
     if input_path:
         col_btn, _ = st.columns([1, 3])

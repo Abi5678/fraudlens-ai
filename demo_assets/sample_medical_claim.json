@@ -1,52 +1,323 @@
 {
   "claim_data": {
     "patient": {
-      "name": "Jane Doe",
-      "member_id": "DEMO-MEM-001",
-      "dob": "1980-05-15",
-      "subscriber": "John Doe"
+      "name": "Robert M. Vasquez",
+      "member_id": "MEM-2025-88421",
+      "dob": "1978-09-22",
+      "subscriber": "Robert M. Vasquez",
+      "address": "4218 Palm Creek Dr, Tampa, FL 33614",
+      "phone": "813-555-0147"
     },
     "provider": {
-      "name": "Demo Medical Group",
-      "npi": "1234567890",
-      "tax_id": "12-3456789",
-      "address": "100 Demo Ave, Tampa, FL 33602"
+      "name": "Sunshine Spine & Recovery Center",
+      "npi": "1928374650",
+      "tax_id": "59-4821937",
+      "address": "9100 N Florida Ave, Suite 300, Tampa, FL 33612"
+    },
+    "referring_provider": {
+      "name": "Dr. Elena Ruiz",
+      "npi": "1234509876",
+      "specialty": "General Practice"
     },
     "payer": {
-      "name": "Demo Health Plan",
-      "id": "PAYER-DEMO-01"
+      "name": "National Auto Casualty Insurance",
+      "id": "PAYER-NAC-FL-2025",
+      "policy_number": "PIP-FL-2025-44210"
     },
-    "dates_of_service": ["2025-11-01", "2025-11-01"],
+    "claim": {
+      "number": "CLM-2025-FL-009821",
+      "amount": 127850.00,
+      "type": "health",
+      "date_filed": "2026-05-15",
+      "authorization": "None on file"
+    },
+    "incident": {
+      "date": "2025-10-12",
+      "description": "Minor rear-end motor vehicle collision at low speed (approx 8 mph) in parking lot. No airbag deployment. Patient drove home from scene.",
+      "police_report": "None filed"
+    },
+    "medical": {
+      "injuries": ["whiplash", "cervical strain", "lumbar sprain", "soft tissue injury", "neck pain", "back pain"],
+      "costs": 127850.00,
+      "providers": [
+        "Sunshine Spine & Recovery Center",
+        "Tampa Bay Chiropractic Wellness",
+        "Advanced Pain Management Associates",
+        "Coastal Imaging Center"
+      ]
+    },
+    "dates_of_service": [
+      "2025-11-02", "2025-11-03", "2025-11-04", "2025-11-05",
+      "2025-11-10", "2025-11-11", "2025-11-12",
+      "2025-11-17", "2025-11-18", "2025-11-19",
+      "2025-12-01", "2025-12-15", "2026-01-05",
+      "2026-01-20", "2026-02-10", "2026-03-01"
+    ],
     "place_of_service": "11",
     "line_items": [
       {
         "cpt": "99215",
-        "icd10": ["M54.5", "S13.4"],
-        "description": "Office visit, high complexity",
+        "icd10": ["S13.4XXA", "M54.2"],
+        "description": "Office visit, high complexity - initial evaluation",
         "units": 1,
-        "charge": 285.00,
-        "date": "2025-11-01"
+        "charge": 385.00,
+        "date": "2025-11-02",
+        "provider": "Sunshine Spine & Recovery Center",
+        "notes": "Patient presents 3 weeks post-MVA. Complains of neck stiffness."
+      },
+      {
+        "cpt": "99215",
+        "icd10": ["S13.4XXA", "M54.2"],
+        "description": "Office visit, high complexity - follow-up",
+        "units": 1,
+        "charge": 385.00,
+        "date": "2025-11-03",
+        "provider": "Sunshine Spine & Recovery Center",
+        "notes": "Follow-up. No change in symptoms."
+      },
+      {
+        "cpt": "72148",
+        "icd10": ["S13.4XXA", "M54.5"],
+        "description": "MRI lumbar spine without contrast",
+        "units": 1,
+        "charge": 2800.00,
+        "date": "2025-11-04",
+        "provider": "Coastal Imaging Center",
+        "notes": "Ordered by treating physician. Findings: mild disc bulge L4-L5, age-appropriate degenerative changes."
+      },
+      {
+        "cpt": "72141",
+        "icd10": ["S13.4XXA", "M54.2"],
+        "description": "MRI cervical spine without contrast",
+        "units": 1,
+        "charge": 2650.00,
+        "date": "2025-11-04",
+        "provider": "Coastal Imaging Center",
+        "notes": "Findings: no acute abnormality. Mild degenerative changes at C5-C6."
+      },
+      {
+        "cpt": "93015",
+        "icd10": ["S13.4XXA"],
+        "description": "Cardiovascular stress test",
+        "units": 1,
+        "charge": 1450.00,
+        "date": "2025-11-05",
+        "provider": "Sunshine Spine & Recovery Center",
+        "notes": "Ordered to rule out cardiac involvement. No cardiac symptoms documented."
+      },
+      {
+        "cpt": "97161",
+        "icd10": ["S13.4XXA", "M54.5"],
+        "description": "Physical therapy evaluation, high complexity",
+        "units": 1,
+        "charge": 250.00,
+        "date": "2025-11-10",
+        "provider": "Sunshine Spine & Recovery Center"
+      },
+      {
+        "cpt": "97163",
+        "icd10": ["S13.4XXA", "M54.5"],
+        "description": "Physical therapy evaluation, high complexity",
+        "units": 1,
+        "charge": 275.00,
+        "date": "2025-11-10",
+        "provider": "Sunshine Spine & Recovery Center",
+        "notes": "Duplicate PT evaluation same day as 97161"
+      },
+      {
+        "cpt": "97140",
+        "icd10": ["S13.4XXA", "M54.2", "M54.5"],
+        "description": "Manual therapy techniques",
+        "units": 48,
+        "charge": 14400.00,
+        "date": "2025-11-10 through 2026-03-01",
+        "provider": "Sunshine Spine & Recovery Center",
+        "notes": "3 sessions per week for 16 weeks. Minimal progress documented."
+      },
+      {
+        "cpt": "97110",
+        "icd10": ["S13.4XXA", "M54.5"],
+        "description": "Therapeutic exercises",
+        "units": 48,
+        "charge": 12000.00,
+        "date": "2025-11-10 through 2026-03-01",
+        "provider": "Sunshine Spine & Recovery Center"
+      },
+      {
+        "cpt": "98940",
+        "icd10": ["M99.01", "M54.2"],
+        "description": "Chiropractic manipulation, spinal, 1-2 regions",
+        "units": 36,
+        "charge": 5400.00,
+        "date": "2025-11-10 through 2026-02-28",
+        "provider": "Tampa Bay Chiropractic Wellness",
+        "notes": "3x/week chiropractic adjustments. Overlaps with PT sessions at Sunshine Spine on same dates."
+      },
+      {
+        "cpt": "98941",
+        "icd10": ["M99.01", "M54.2", "M54.5"],
+        "description": "Chiropractic manipulation, spinal, 3-4 regions",
+        "units": 36,
+        "charge": 7200.00,
+        "date": "2025-11-10 through 2026-02-28",
+        "provider": "Tampa Bay Chiropractic Wellness",
+        "notes": "Billed same dates as 98940. Both 1-2 region and 3-4 region manipulation on same visit."
+      },
+      {
+        "cpt": "64493",
+        "icd10": ["M54.5", "M54.2"],
+        "description": "Facet joint injection, lumbar, first level",
+        "units": 6,
+        "charge": 15600.00,
+        "date": "2025-12-01, 2025-12-15, 2026-01-05, 2026-01-20, 2026-02-10, 2026-03-01",
+        "provider": "Advanced Pain Management Associates",
+        "notes": "Monthly facet injections. No imaging confirmation of facet pathology. Patient reports temporary relief only."
+      },
+      {
+        "cpt": "64494",
+        "icd10": ["M54.5"],
+        "description": "Facet joint injection, lumbar, second level",
+        "units": 6,
+        "charge": 12600.00,
+        "date": "2025-12-01, 2025-12-15, 2026-01-05, 2026-01-20, 2026-02-10, 2026-03-01",
+        "provider": "Advanced Pain Management Associates",
+        "notes": "Second level added each session. Billed alongside 64493."
+      },
+      {
+        "cpt": "85025",
+        "icd10": ["S13.4XXA"],
+        "description": "Complete blood count (CBC)",
+        "units": 6,
+        "charge": 210.00,
+        "date": "2025-11-02, 2025-12-01, 2026-01-05, 2026-01-20, 2026-02-10, 2026-03-01",
+        "provider": "Sunshine Spine & Recovery Center",
+        "notes": "Monthly CBC. No clinical indication for repeated blood work for soft tissue injury."
+      },
+      {
+        "cpt": "80048",
+        "icd10": ["S13.4XXA"],
+        "description": "Basic metabolic panel",
+        "units": 6,
+        "charge": 240.00,
+        "date": "2025-11-02, 2025-12-01, 2026-01-05, 2026-01-20, 2026-02-10, 2026-03-01",
+        "provider": "Sunshine Spine & Recovery Center",
+        "notes": "Billed separately instead of comprehensive panel. No metabolic indication."
+      },
+      {
+        "cpt": "84443",
+        "icd10": ["S13.4XXA"],
+        "description": "Thyroid stimulating hormone (TSH)",
+        "units": 6,
+        "charge": 300.00,
+        "date": "2025-11-02, 2025-12-01, 2026-01-05, 2026-01-20, 2026-02-10, 2026-03-01",
+        "provider": "Sunshine Spine & Recovery Center",
+        "notes": "Monthly thyroid panel for neck sprain patient. No thyroid symptoms documented."
       },
       {
         "cpt": "80053",
-        "icd10": ["M54.5"],
+        "icd10": ["S13.4XXA"],
         "description": "Comprehensive metabolic panel",
-        "units": 1,
-        "charge": 45.00,
-        "date": "2025-11-01"
+        "units": 6,
+        "charge": 270.00,
+        "date": "2025-11-02, 2025-12-01, 2026-01-05, 2026-01-20, 2026-02-10, 2026-03-01",
+        "provider": "Sunshine Spine & Recovery Center",
+        "notes": "Comprehensive panel billed same dates as basic metabolic panel 80048 — potential unbundling."
       },
       {
-        "cpt": "83036",
-        "icd10": ["R79.89"],
-        "description": "Hemoglobin A1c",
+        "cpt": "99215",
+        "icd10": ["M54.2", "M54.5", "S13.4XXA"],
+        "description": "Office visit, high complexity - pain management",
+        "units": 6,
+        "charge": 2310.00,
+        "date": "2025-12-01, 2025-12-15, 2026-01-05, 2026-01-20, 2026-02-10, 2026-03-01",
+        "provider": "Advanced Pain Management Associates",
+        "notes": "Monthly visits billed at highest E/M level. Notes document brief 10-minute encounters with minimal examination."
+      },
+      {
+        "cpt": "J1885",
+        "icd10": ["M54.5"],
+        "description": "Ketorolac injection 15mg",
+        "units": 24,
+        "charge": 2400.00,
+        "date": "2025-11-10 through 2026-03-01",
+        "provider": "Sunshine Spine & Recovery Center",
+        "notes": "Bi-weekly injections. Extended NSAID injection course for soft tissue injury."
+      },
+      {
+        "cpt": "E0730",
+        "icd10": ["M54.2"],
+        "description": "TENS unit, 4 leads",
         "units": 1,
-        "charge": 52.00,
-        "date": "2025-11-01"
+        "charge": 1475.00,
+        "date": "2025-11-02",
+        "provider": "Sunshine Spine & Recovery Center",
+        "notes": "Prescribed at initial visit before any conservative treatment attempted."
+      },
+      {
+        "cpt": "97012",
+        "icd10": ["S13.4XXA", "M54.5"],
+        "description": "Mechanical traction therapy",
+        "units": 48,
+        "charge": 9600.00,
+        "date": "2025-11-10 through 2026-03-01",
+        "provider": "Sunshine Spine & Recovery Center",
+        "notes": "3x/week. Billed alongside manual therapy and therapeutic exercises each session."
+      },
+      {
+        "cpt": "96372",
+        "icd10": ["M54.5"],
+        "description": "Therapeutic injection",
+        "units": 24,
+        "charge": 3600.00,
+        "date": "2025-11-10 through 2026-03-01",
+        "provider": "Sunshine Spine & Recovery Center"
+      },
+      {
+        "cpt": "99070",
+        "icd10": ["S13.4XXA"],
+        "description": "Supplies and materials",
+        "units": 16,
+        "charge": 4800.00,
+        "date": "2025-11-02 through 2026-03-01",
+        "provider": "Sunshine Spine & Recovery Center",
+        "notes": "Weekly supply charges. No itemization of supplies provided."
+      },
+      {
+        "cpt": "G0283",
+        "icd10": ["M54.2", "M54.5"],
+        "description": "Electrical stimulation (unattended)",
+        "units": 48,
+        "charge": 7200.00,
+        "date": "2025-11-10 through 2026-03-01",
+        "provider": "Sunshine Spine & Recovery Center",
+        "notes": "Billed same sessions as TENS, manual therapy, traction, and therapeutic exercises."
+      },
+      {
+        "cpt": "99455",
+        "icd10": ["S13.4XXA"],
+        "description": "Work-related disability evaluation",
+        "units": 3,
+        "charge": 2250.00,
+        "date": "2025-12-01, 2026-01-15, 2026-02-15",
+        "provider": "Sunshine Spine & Recovery Center",
+        "notes": "Disability evaluations. Patient is self-employed with no documented employer or workers comp claim."
       }
     ],
-    "total_charge": 382.00,
-    "diagnosis_codes": ["M54.5", "S13.4", "R79.89"],
-    "procedure_codes": ["99215", "80053", "83036"]
+    "total_charge": 127850.00,
+    "diagnosis_codes": ["S13.4XXA", "M54.2", "M54.5", "M99.01", "R79.89"],
+    "procedure_codes": [
+      "99215", "72148", "72141", "93015",
+      "97161", "97163", "97140", "97110", "97012",
+      "98940", "98941",
+      "64493", "64494",
+      "85025", "80048", "84443", "80053",
+      "J1885", "E0730", "96372", "99070", "G0283", "99455"
+    ],
+    "medications_prescribed": [
+      {"name": "Oxycodone 10mg", "frequency": "TID", "duration": "16 weeks", "prescriber": "Dr. Elena Ruiz"},
+      {"name": "Cyclobenzaprine 10mg", "frequency": "TID", "duration": "16 weeks", "prescriber": "Dr. Elena Ruiz"},
+      {"name": "Gabapentin 300mg", "frequency": "TID", "duration": "16 weeks", "prescriber": "Advanced Pain Management Associates"}
+    ]
   },
-  "raw_text": "CMS-1500 claim for office visit and labs. Patient Jane Doe (DEMO-MEM-001), DOB 1980-05-15. Provider Demo Medical Group, NPI 1234567890. Date of service 11/01/2025. Office visit 99215 (high complexity) with diagnoses M54.5 (low back pain), S13.4 (neck sprain). Labs: comprehensive metabolic panel 80053, hemoglobin A1c 83036. Total billed $382.00. No prior auth on file for 99215. Clinical notes indicate 45-minute visit, moderate decision-making; documentation supports 99215 level."
+  "raw_text": "MEDICAL CLAIM REVIEW - CLM-2025-FL-009821\n\nPATIENT: Robert M. Vasquez, DOB 09/22/1978, Member ID MEM-2025-88421\nPOLICY: PIP-FL-2025-44210, National Auto Casualty Insurance\nDATE OF INCIDENT: 10/12/2025\nDATE OF FIRST TREATMENT: 11/02/2025 (21 days post-incident)\nDATE CLAIM FILED: 05/15/2026 (7 months post-incident)\nTOTAL BILLED: $127,850.00\n\nINCIDENT DESCRIPTION:\nPatient reports minor rear-end motor vehicle collision in a parking lot at approximately 8 mph. No airbag deployment. No police report filed. Patient states he drove home from the scene without assistance. No emergency room visit. Patient waited 3 weeks before seeking any medical treatment, which is a significant gap between the reported minor incident and the initiation of an extensive treatment plan.\n\nCLINICAL NOTES SUMMARY:\n\n11/02/2025 - Initial Visit (Sunshine Spine & Recovery Center)\nPatient presents with complaints of neck stiffness and intermittent low back pain. Physical exam: mild tenderness to palpation over cervical paraspinals. Full range of motion in all extremities. Neurological exam normal. Assessment: cervical strain (S13.4XXA), cervicalgia (M54.2), low back pain (M54.5). Plan: MRI cervical and lumbar spine ordered, begin physical therapy 3x/week, TENS unit prescribed, labs ordered.\n\nNOTE: Documentation supports 99213 (moderate complexity) visit level. Billed as 99215 (high complexity). Clinical decision-making is straightforward for this presentation.\n\n11/04/2025 - Imaging (Coastal Imaging Center)\nMRI Cervical Spine: No acute abnormality. Mild degenerative changes C5-C6, age-appropriate.\nMRI Lumbar Spine: Mild disc bulge L4-L5. No stenosis, no nerve root compression. Age-appropriate degenerative changes.\nNOTE: MRI findings are unremarkable and inconsistent with the extensive treatment plan that follows.\n\n11/05/2025 - Cardiovascular Stress Test (Sunshine Spine)\nCardiac stress test performed. Normal results. No cardiac symptoms were documented at any visit. This test appears medically unnecessary for a neck sprain diagnosis and represents a suspicious mismatch between the diagnosis and the procedure ordered.\n\n11/10/2025 - Physical Therapy Begins\nPT evaluation billed twice on same date (97161 AND 97163) - duplicate billing. Treatment plan: manual therapy, therapeutic exercises, mechanical traction, electrical stimulation - all billed per session, 3x/week for 16 weeks. This represents an unusually intensive and prolonged treatment regimen for soft tissue injuries from a minor low-speed collision.\n\nConcurrent chiropractic treatment initiated at Tampa Bay Chiropractic Wellness on same dates as PT sessions at Sunshine Spine. Both chiropractic codes 98940 (1-2 regions) and 98941 (3-4 regions) billed on each visit - suspicious duplicate manipulation billing.\n\n12/01/2025 - Pain Management Initiated (Advanced Pain Management Associates)\nFacet joint injections begun (64493, 64494) - monthly for 6 months. No diagnostic medial branch block performed prior to therapeutic injections. No imaging confirmation of facet joint pathology. MRI showed only age-appropriate changes. Monthly pain management visits billed at 99215 (high complexity) but documentation shows brief 10-minute encounters.\n\nLABORATORY CONCERNS:\nMonthly CBC (85025), Basic Metabolic Panel (80048), Comprehensive Metabolic Panel (80053), and TSH (84443) ordered throughout treatment. Basic and comprehensive metabolic panels billed on same dates - clear unbundling. No clinical indication for repeated blood work or thyroid testing for a soft tissue injury. TSH testing for a neck sprain patient with no thyroid symptoms is medically unjustified.\n\nMEDICATION CONCERNS:\nOxycodone 10mg TID prescribed for 16 weeks for soft tissue injury from a minor collision. This is inconsistent with standard treatment guidelines which recommend NSAIDs and conservative therapy. Extended opioid prescription for a low-speed MVA whiplash injury raises significant concerns.\n\nMULTIPLE PROVIDER OVERLAP:\nThree separate providers billing for overlapping services on same dates:\n- Sunshine Spine & Recovery Center: PT, injections, labs, supplies\n- Tampa Bay Chiropractic Wellness: Chiropractic adjustments (same dates as PT)\n- Advanced Pain Management Associates: Facet injections, office visits\n\nAll three providers are located within a 2-mile radius and share the same referring physician (Dr. Elena Ruiz, NPI 1234509876). This pattern is consistent with coordinated provider networks commonly associated with medical fraud mills.\n\nSUPPLY CHARGES:\n$4,800 in supply charges (99070) over 16 weeks with no itemization. Standard practice requires itemized supply documentation.\n\nDISABILITY EVALUATIONS:\nThree work disability evaluations billed (99455) for a patient who is self-employed with no documented employer and no workers compensation claim on file. Medical necessity for disability evaluations is questionable.\n\nSUMMARY OF CONCERNS:\n1. Significant 3-week delay between minor incident and first treatment\n2. Extensive 16-week treatment plan for minor soft tissue injuries from 8 mph collision\n3. MRI findings do not support the intensity of treatment provided\n4. Cardiac stress test with no cardiac symptoms - diagnosis-procedure mismatch\n5. Duplicate PT evaluations billed same day\n6. Duplicate chiropractic manipulation codes billed same visits\n7. Lab unbundling - basic and comprehensive metabolic panels on same dates\n8. Medically unnecessary labs (TSH for neck sprain)\n9. 99215 upcoding - documentation supports lower visit levels\n10. Opioid prescribing inconsistent with soft tissue injury severity\n11. Three providers billing overlapping services on same dates\n12. Shared referring physician across all providers within 2-mile radius\n13. No police report for MVA claim\n14. $4,800 in unitemized supply charges\n15. Disability evaluations for self-employed patient with no workers comp claim\n16. Claim filed 7 months after incident\n17. Total billed $127,850 for parking lot fender bender"
 }
