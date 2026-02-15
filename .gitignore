@@ -55,6 +55,9 @@ eval/data/
 eval/results*.json
 eval/__pycache__/
 
+# Demo TTS output (regenerate with scripts/generate_demo_tts.py)
+demo_assets/audio/*.mp3
+
 # Test artifacts
 test_report.json
 PLAN.md

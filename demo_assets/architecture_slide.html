@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FraudLens AI — Architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0f;
+      color: #f0f0f5;
+      min-height: 100vh;
+      padding: 2rem;
+      font-size: 14px;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      color: #76B900;
+    }
+    .diagram {
+      font-family: 'JetBrains Mono', monospace;
+      white-space: pre;
+      overflow-x: auto;
+      background: #111118;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 1.5rem;
+      line-height: 1.5;
+      color: #b0b0c0;
+    }
+    .phase { color: #76B900; }
+    .tech { color: #4a9eff; }
+  </style>
+</head>
+<body>
+  <h1>FraudLens AI — 100% NVIDIA Stack</h1>
+  <div class="diagram">Document Input → [Document Agent — Nemotron-Parse, nv-ingest]
+         │
+         ├── [Inconsistency Agent — NIM Llama 3.3 70B]
+         ├── [Pattern Agent — NeMo Retriever RAG + Milvus]
+         ├── [Network Agent — cuGraph]
+         └── [Deepfake Agent — NIM + TensorRT]
+         │
+         ▼
+    [Scoring Agent — NIM] → [Narrative Agent — Nemotron]
+         │
+         ▼
+    Fraud Score + Investigation Report</div>
+</body>
+</html>

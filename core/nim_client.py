@@ -70,7 +70,13 @@ class NIMClient:
             )
         
         self.config = config
-        
+        if not (config.api_key or "").strip():
+            raise ValueError(
+                "NVIDIA_API_KEY is not set. "
+                "On Hugging Face Spaces: Settings → Variables and secrets → add NVIDIA_API_KEY. "
+                "Get a key at https://build.nvidia.com/explore/discover"
+            )
+
         # OpenAI-compatible client for LLM
         self.openai_client = AsyncOpenAI(
             base_url=config.base_url,

@@ -15,7 +15,7 @@ from ui.components.chat import render_chat
 from ui.components.results_common import (
     risk_color, tooltip, _val,
     run_async, create_gauge, create_risk_factors_chart,
-    render_skeleton_loader, render_error,
+    render_skeleton_loader, render_error, user_facing_error,
 )
 
 
@@ -252,15 +252,31 @@ def render():
     </div>
     """, unsafe_allow_html=True)
 
-    uploaded_file = st.file_uploader(
-        "Drop medical claim documents (PDF, image, or JSON)",
-        type=["pdf", "png", "jpg", "jpeg", "json"],
+    project_root = Path(__file__).resolve().parent.parent.parent
+    sample_claim_path = project_root / "demo_assets" / "sample_medical_claim.json"
+
+    input_mode = st.radio(
+        "Input",
+        options=["Upload file", "Use sample claim"],
+        horizontal=True,
+        key="medical_input_mode",
         label_visibility="collapsed",
-        key="medical_upload",
     )
 
+    uploaded_file = None
+    if input_mode == "Upload file":
+        uploaded_file = st.file_uploader(
+            "Drop medical claim documents (PDF, image, or JSON)",
+            type=["pdf", "png", "jpg", "jpeg", "json"],
+            label_visibility="collapsed",
+            key="medical_upload",
+        )
+
+    use_sample = input_mode == "Use sample claim" and sample_claim_path.exists()
+
     has_result = "medical_result" in st.session_state
-    step = 3 if has_result else (2 if uploaded_file else 1)
+    has_input = bool(uploaded_file) or use_sample
+    step = 3 if has_result else (2 if has_input else 1)
     render_steps(step, labels=["Upload", "Analyze", "Report"])
 
     input_path = None
@@ -269,6 +285,9 @@ def render():
         with open(temp_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
         input_path = str(temp_path)
+    elif use_sample:
+        input_path = str(sample_claim_path)
+        st.caption("Using demo sample claim (Jane Doe, Demo Medical Group). No real data.")
 
     if input_path:
         col_btn, _ = st.columns([1, 3])
@@ -290,7 +309,7 @@ def render():
                 progress.empty()
             except Exception as e:
                 progress.empty()
-                st.markdown(render_error(str(e)), unsafe_allow_html=True)
+                st.markdown(render_error(user_facing_error(e)), unsafe_allow_html=True)
                 import traceback
                 with st.expander("Stack trace"):
                     st.code(traceback.format_exc())

@@ -1,4 +1,7 @@
-
+---
+sdk: docker
+app_port: 8501
+---
 
 # 🛡️ FraudLens AI v2 — NVIDIA Edition
 
@@ -23,6 +26,8 @@ source venv/bin/activate
 ```
 
 Then open **http://localhost:8501**. Set `NVIDIA_API_KEY` in `.env` for AI agents.
+
+**Hugging Face Space:** In Space **Settings → Variables and secrets**, add `NVIDIA_API_KEY`. To avoid build timeouts, set **Dockerfile path** to `Dockerfile.hf` (slim image); the default `Dockerfile` uses a larger NVIDIA base.
 
 ---
 
@@ -263,8 +268,14 @@ fraudlens-nvidia/
 │   └── test_orchestrator.py
 ├── scripts/
 │   └── demo.py                    # CLI demo script
+├── demo_assets/                   # Video slides (title, architecture, end card)
+│   ├── title_card.html
+│   ├── architecture_slide.html
+│   ├── end_card.html
+│   └── README.md
 ├── fraudlens.py                   # Main orchestrator
 ├── sample_claim.json              # Test claim with fraud indicators
+├── RECORDING_CHECKLIST.md         # GTC video recording and submission checklist
 ├── requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml
@@ -316,6 +327,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 ---
 
 ## 🏆 Built for NVIDIA GTC 2026 Golden Ticket Contest
+
+**Demo video:** [Add your video URL here after posting with #NVIDIAGTC]
 
 **Technologies Used:**
 - 🟢 NVIDIA NIM (LLM Inference)

@@ -200,6 +200,34 @@ def render_skeleton_loader(message="Analyzing...", sub_message="AI agents workin
     """
 
 
+def user_facing_error(exc: BaseException) -> str:
+    """Turn API/network exceptions into a clear message for Hugging Face and local runs."""
+    msg = str(exc).strip()
+    lower = msg.lower()
+    if not msg:
+        msg = "Unknown error"
+    if any(
+        x in lower
+        for x in (
+            "network error",
+            "axioserror",
+            "connection",
+            "timeout",
+            "api key",
+            "nvidia_api_key",
+            "unreachable",
+            "connection refused",
+            "connection reset",
+        )
+    ) or "integrate.api.nvidia.com" in msg:
+        return (
+            "Cannot reach the AI service (NVIDIA NIM). "
+            "On Hugging Face Spaces: add NVIDIA_API_KEY in Settings → Variables and secrets. "
+            "If the key is set, the Space may be timing out or unable to reach integrate.api.nvidia.com."
+        )
+    return msg
+
+
 def render_error(error_msg):
     """Return HTML string for an error card."""
     return f"""

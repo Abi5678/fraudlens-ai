@@ -26,6 +26,9 @@ python-dotenv>=1.0.0
 # Logging
 loguru>=0.7.0
 
+# Demo TTS (free: Microsoft Edge online via edge-tts)
+edge-tts>=6.1.0
+
 # Eval: metrics, calibration, threshold optimization, label application from metadata
 scikit-learn>=1.3.0
 scipy>=1.11.0

@@ -69,6 +69,17 @@
 
 ---
 
+## Scene 3b (optional): MedClaim & Photo ID
+
+**Narration (one line):**  
+"FraudLens also runs MedClaim AI for medical billing fraud and IDVerify for photo ID verification — same NVIDIA stack, different verticals."
+
+**Action (if showing):**
+1. Switch to **Medical Insurance**, click **Use sample claim**, then **Analyze Claim** — show billing/clinical/eligibility results.
+2. Switch to **Photo ID Check**, click **Use sample ID**, then **Verify ID** — show authenticity score and narrative.
+
+---
+
 ## SCENE 5: Technical Differentiators (1:30 - 1:50)
 
 **[Screen: Split — terminal running tests + architecture]**

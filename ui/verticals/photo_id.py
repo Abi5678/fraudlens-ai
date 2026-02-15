@@ -233,16 +233,32 @@ def render():
         unsafe_allow_html=True,
     )
 
-    uploaded_files = st.file_uploader(
-        "Drop photo ID images (PNG, JPG)",
-        type=["png", "jpg", "jpeg"],
+    project_root = Path(__file__).resolve().parent.parent.parent
+    sample_id_path = project_root / "demo_assets" / "sample_id_placeholder.png"
+
+    input_mode = st.radio(
+        "Input",
+        options=["Upload images", "Use sample ID"],
+        horizontal=True,
+        key="photoid_input_mode",
         label_visibility="collapsed",
-        accept_multiple_files=True,
-        key="photoid_upload",
     )
 
+    uploaded_files = None
+    if input_mode == "Upload images":
+        uploaded_files = st.file_uploader(
+            "Drop photo ID images (PNG, JPG)",
+            type=["png", "jpg", "jpeg"],
+            label_visibility="collapsed",
+            accept_multiple_files=True,
+            key="photoid_upload",
+        )
+
+    use_sample = input_mode == "Use sample ID" and sample_id_path.exists()
+
     has_result = "photoid_result" in st.session_state
-    step = 3 if has_result else (2 if uploaded_files else 1)
+    has_input = bool(uploaded_files) or use_sample
+    step = 3 if has_result else (2 if has_input else 1)
     render_steps(step, labels=["Upload", "Scan", "Verify"])
 
     image_paths = []
@@ -252,6 +268,9 @@ def render():
             with open(temp_path, "wb") as f:
                 f.write(uf.getbuffer())
             image_paths.append(str(temp_path))
+    elif use_sample:
+        image_paths = [str(sample_id_path)]
+        st.caption("Using demo sample ID image. Not a real document.")
 
     if image_paths:
         col_btn, _ = st.columns([1, 3])

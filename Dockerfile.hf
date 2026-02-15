@@ -1,5 +1,4 @@
-# FraudLens AI - Hugging Face Spaces / lightweight deployment
-# For GPU deployment, use Dockerfile.gpu instead.
+# FraudLens AI - Hugging Face Space (slim image; no local GPU needed for NIM API)
 FROM python:3.11-slim
 
 WORKDIR /app

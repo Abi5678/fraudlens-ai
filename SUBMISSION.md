@@ -183,7 +183,7 @@ pytest tests/ -v
 ## Links
 - **Repository:** [github.com/Abi5678/fraudlens-ai](https://github.com/Abi5678/fraudlens-ai)
 - **Live Demo:** [fraudlensai.streamlit.app](https://fraudlensai.streamlit.app)
-- **Demo Video:** [Post on LinkedIn/X with #NVIDIAGTC]
+- **Demo Video:** [Add your video URL here after posting on LinkedIn/X with #NVIDIAGTC and judge tag]
 
 ---
 

@@ -99,8 +99,13 @@ class VectorStore:
                 from pathlib import Path
                 import asyncio
 
-                base = Path(__file__).parent.parent
-                db_path = str(base / f"{self.collection_name}.db")
+                # Use /tmp/milvus/ by default (writable on HF Spaces and locally).
+                # Override with MILVUS_DB_PATH env var if needed.
+                db_path = os.environ.get(
+                    "MILVUS_DB_PATH",
+                    str(Path("/tmp/milvus") / f"{self.collection_name}.db"),
+                )
+                Path(db_path).parent.mkdir(parents=True, exist_ok=True)
                 last_err = None
                 for attempt in range(5):
                     try:

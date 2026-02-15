@@ -1,0 +1,55 @@
+# FraudLens AI — Narration for MB claim demo (Muralikrishna Bangalore)
+# Use with: python scripts/generate_demo_tts.py --script demo_assets/narration_script_mb_claim.txt --voice christopher
+
+---
+SCENE 1 (0:00–0:15) — Hook
+---
+Insurance fraud costs the industry 308 billion dollars annually. Investigations take 60 plus days per claim. Today I'll walk through a real auto claim: Muralikrishna Bangalore, 3,798 dollars 76 cents. FraudLens AI uses NVIDIA's full AI stack to analyze claims in under 5 minutes — detecting not just individual fraud, but organized fraud rings.
+
+---
+SCENE 2 (0:15–0:35) — Architecture
+---
+FraudLens AI is a multi-agent system built entirely on NVIDIA technology:
+
+Nemotron-Parse extracts structured data from any document.
+NVIDIA NIM powers 7 specialized AI agents running in parallel.
+NeMo Retriever matches claims against known fraud patterns using RAG.
+cuGraph detects fraud rings through GPU-accelerated graph analytics.
+Milvus stores and searches fraud pattern embeddings.
+
+---
+SCENE 3 (0:35–0:55) — Live demo
+---
+Let me walk through the analysis of this claim. We uploaded the raw PDF: an auto collision claim from Muralikrishna Bangalore — claim number 60690621, 3,798 dollars 76 cents, 2025 Chevrolet Suburban, 23 images. FraudLens runs 7 agents in parallel: document extraction, inconsistency checks, pattern matching, network analysis, and image authenticity.
+
+---
+SCENE 4 (0:55–1:30) — Results
+---
+In under a minute we get a full investigation report.
+
+Fraud score: 38 point 1 out of 100 — Medium risk. 82 percent confidence. Recommendation: review; additional documentation required.
+
+Zero inconsistencies detected. Five pattern matches found. No fraud ring detected; network risk 50. The risk breakdown shows fraud pattern match at 100, image authenticity at 62, network risk at 50. Image authenticity analysis: 62 — high risk — 23 images analyzed for lighting, compression, staging, and cloning.
+
+Extracted data: claimant Muralikrishna Bangalore, address 40 Collins Ave Saugus MA, claim 60690621, 3,798 dollars 76 cents, auto collision, 2025 Chevrolet Suburban, date of loss September 1st 2025. The executive summary flags a moderate level of risk and five pattern matches warranting further review. Red flags include unusual claim amount and rapid claim submission. Recommended actions: further verification, claim review, and claimant interview.
+
+---
+SCENE 5 (1:30–1:50) — Differentiators
+---
+What makes FraudLens AI unique:
+
+7 specialized agents working in parallel — not a single prompt.
+RAG-powered pattern matching with NeMo Retriever embeddings and reranking.
+Graph-based fraud ring detection — because fraud is organized, not isolated.
+Explainable AI — every score comes with evidence and reasoning.
+61 passing tests covering all agents end-to-end.
+
+---
+SCENE 6 (1:50–2:00) — Impact and close
+---
+For a mid-size insurer processing 50,000 claims per year:
+Investigation time: 60 days down to 5 minutes.
+Cost per investigation: 500 dollars down to 10 cents.
+Projected savings: 45 million dollars annually.
+
+FraudLens AI — detecting fraud in minutes, not months. Built 100 percent on NVIDIA.

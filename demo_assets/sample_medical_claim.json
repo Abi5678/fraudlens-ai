@@ -1,0 +1,52 @@
+{
+  "claim_data": {
+    "patient": {
+      "name": "Jane Doe",
+      "member_id": "DEMO-MEM-001",
+      "dob": "1980-05-15",
+      "subscriber": "John Doe"
+    },
+    "provider": {
+      "name": "Demo Medical Group",
+      "npi": "1234567890",
+      "tax_id": "12-3456789",
+      "address": "100 Demo Ave, Tampa, FL 33602"
+    },
+    "payer": {
+      "name": "Demo Health Plan",
+      "id": "PAYER-DEMO-01"
+    },
+    "dates_of_service": ["2025-11-01", "2025-11-01"],
+    "place_of_service": "11",
+    "line_items": [
+      {
+        "cpt": "99215",
+        "icd10": ["M54.5", "S13.4"],
+        "description": "Office visit, high complexity",
+        "units": 1,
+        "charge": 285.00,
+        "date": "2025-11-01"
+      },
+      {
+        "cpt": "80053",
+        "icd10": ["M54.5"],
+        "description": "Comprehensive metabolic panel",
+        "units": 1,
+        "charge": 45.00,
+        "date": "2025-11-01"
+      },
+      {
+        "cpt": "83036",
+        "icd10": ["R79.89"],
+        "description": "Hemoglobin A1c",
+        "units": 1,
+        "charge": 52.00,
+        "date": "2025-11-01"
+      }
+    ],
+    "total_charge": 382.00,
+    "diagnosis_codes": ["M54.5", "S13.4", "R79.89"],
+    "procedure_codes": ["99215", "80053", "83036"]
+  },
+  "raw_text": "CMS-1500 claim for office visit and labs. Patient Jane Doe (DEMO-MEM-001), DOB 1980-05-15. Provider Demo Medical Group, NPI 1234567890. Date of service 11/01/2025. Office visit 99215 (high complexity) with diagnoses M54.5 (low back pain), S13.4 (neck sprain). Labs: comprehensive metabolic panel 80053, hemoglobin A1c 83036. Total billed $382.00. No prior auth on file for 99215. Clinical notes indicate 45-minute visit, moderate decision-making; documentation supports 99215 level."
+}
